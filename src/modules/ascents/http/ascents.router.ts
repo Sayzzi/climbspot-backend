@@ -45,12 +45,16 @@ export function createAscentsRouter({
 
   // Declared before `/:id`, which would otherwise capture it.
   router.get('/nearby', async (req, res) => {
-    const { latitude, longitude, radius, limit } = nearbyQuerySchema.parse(req.query);
+    const { latitude, longitude, radius, limit, activity, category } = nearbyQuerySchema.parse(
+      req.query,
+    );
 
     const results = await findAscentsNearby.execute({
       position: { latitude, longitude },
       radius,
       limit,
+      activities: activity,
+      categories: category,
     });
 
     res.json(toNearbyAscentsResponse(results));

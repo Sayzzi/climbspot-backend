@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Database } from '../../../../shared/infrastructure/database.ts';
 import type {
@@ -81,14 +81,26 @@ export class DrizzleAscentRepository implements AscentRepository {
     return row && toAscent(row);
   }
 
-  async findNearby({ position, radius, limit }: NearbyCriteria): Promise<NearbyAscent[]> {
+  async findNearby({
+    position,
+    radius,
+    limit,
+    surfaces,
+    categories,
+  }: NearbyCriteria): Promise<NearbyAscent[]> {
     const origin = pointFrom(position);
     const distanceToStart = sql<number>`extensions.st_distance(${ascents.start}, ${origin})`;
 
     const rows = await this.db
       .select({ ...summaryColumns, distanceToStart: distanceToStart.as('distance_to_start') })
       .from(ascents)
-      .where(sql`extensions.st_dwithin(${ascents.start}, ${origin}, ${radius})`)
+      .where(
+        and(
+          sql`extensions.st_dwithin(${ascents.start}, ${origin}, ${radius})`,
+          surfaces && inArray(ascents.surface, [...surfaces]),
+          categories && inArray(ascents.category, [...categories]),
+        ),
+      )
       .orderBy(distanceToStart, ascents.id)
       .limit(limit);
 

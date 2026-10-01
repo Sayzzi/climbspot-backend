@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { uploadGpx, useAscentsApp } from '../../../test/ascents-app.ts';
 import { gpxTrack } from '../../../test/gpx.ts';
-import { northOf, ORIGIN, straightNorth } from '../../../test/terrain.ts';
+import { northOf, ORIGIN, straightNorth, uniformSlope } from '../../../test/terrain.ts';
 
 const buildApp = useAscentsApp();
 
@@ -18,7 +18,10 @@ async function ascentStartingNorth(app: Express, name: string, distanceNorth: nu
   expect(response.status).toBe(201);
 }
 
-function searchNearby(app: Express, query: Record<string, string | number> = {}) {
+function searchNearby(
+  app: Express,
+  query: Record<string, string | number | readonly string[]> = {},
+) {
   return request(app)
     .get('/ascents/nearby')
     .query({ latitude: ORIGIN.latitude, longitude: ORIGIN.longitude, ...query });
@@ -147,5 +150,111 @@ describe('GET /ascents/nearby', () => {
     const response = await request(buildApp()).get('/openapi.json');
 
     expect(response.body).toMatchObject({ paths: { '/ascents/nearby': { get: {} } } });
+  });
+});
+
+describe('GET /ascents/nearby filters', () => {
+  /**
+   * Catalogues, nearest first: a paved Cat 4, a gravel Uncategorized, a trail Cat 3
+   * and a paved Uncategorized Ascent.
+   */
+  async function catalogue() {
+    const at = (distanceNorth: number) => {
+      const [start] = northOf(ORIGIN, distanceNorth);
+      if (start === undefined) {
+        throw new Error('unreachable');
+      }
+      return start;
+    };
+    const create = async (
+      name: string,
+      surface: string,
+      gradient: number,
+      length: number,
+      distanceNorth: number,
+    ) => {
+      const app = buildApp({ terrain: uniformSlope(gradient) });
+      const response = await uploadGpx(app, gpxTrack(straightNorth(at(distanceNorth), length)), {
+        name,
+        surface,
+      });
+      expect(response.status).toBe(201);
+    };
+
+    await create('Paved Cat 4', 'paved', 0.08, 1200, 1000); // score 9,600
+    await create('Gravel Uncategorized', 'gravel', 0.05, 1200, 2000); // score 6,000
+    await create('Trail Cat 3', 'trail', 0.09, 2000, 3000); // score 18,000
+    await create('Paved Uncategorized', 'paved', 0.05, 1200, 4000);
+    return buildApp();
+  }
+
+  it('keeps only the Ascents whose Surface allows the Activity', async () => {
+    const app = await catalogue();
+
+    const roadCycling = await searchNearby(app, { activity: 'road_cycling' });
+    const trailRunning = await searchNearby(app, { activity: 'trail_running' });
+
+    expect(names(roadCycling.body)).toEqual(['Paved Cat 4', 'Paved Uncategorized']);
+    expect(names(trailRunning.body)).toEqual(['Gravel Uncategorized', 'Trail Cat 3']);
+  });
+
+  it('keeps Ascents matching any of several Activities', async () => {
+    const app = await catalogue();
+
+    const response = await searchNearby(app, { activity: ['road_cycling', 'gravel_cycling'] });
+
+    expect(names(response.body)).toEqual([
+      'Paved Cat 4',
+      'Gravel Uncategorized',
+      'Paved Uncategorized',
+    ]);
+  });
+
+  it('keeps only the Ascents in one of the Categories', async () => {
+    const app = await catalogue();
+
+    const uncategorized = await searchNearby(app, { category: 'uncategorized' });
+    const harder = await searchNearby(app, { category: ['cat4', 'cat3'] });
+
+    expect(names(uncategorized.body)).toEqual(['Gravel Uncategorized', 'Paved Uncategorized']);
+    expect(names(harder.body)).toEqual(['Paved Cat 4', 'Trail Cat 3']);
+  });
+
+  it('combines Activity and Category filters', async () => {
+    const app = await catalogue();
+
+    const response = await searchNearby(app, { activity: 'running', category: 'uncategorized' });
+
+    expect(names(response.body)).toEqual(['Gravel Uncategorized', 'Paved Uncategorized']);
+  });
+
+  it('still applies the radius and limit', async () => {
+    const app = await catalogue();
+
+    const withinRadius = await searchNearby(app, { activity: 'running', radius: 3000 });
+    const limited = await searchNearby(app, { activity: 'running', limit: 1 });
+
+    expect(names(withinRadius.body)).toEqual(['Paved Cat 4', 'Gravel Uncategorized']);
+    expect(names(limited.body)).toEqual(['Paved Cat 4']);
+  });
+
+  it.each([
+    ['an unknown Activity', { activity: 'swimming' }],
+    ['an unknown Category', { category: 'cat5' }],
+    ['an unknown value among several', { activity: ['running', 'skiing'] }],
+  ])('refuses %s with VALIDATION_FAILED', async (_, query) => {
+    const response = await searchNearby(buildApp(), query);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({ error: { code: 'VALIDATION_FAILED' } });
+  });
+
+  it('documents the filters in the OpenAPI document', async () => {
+    const response = await request(buildApp()).get('/openapi.json');
+
+    const parameters = response.body.paths['/ascents/nearby'].get.parameters as { name: string }[];
+    expect(parameters.map((parameter) => parameter.name)).toEqual(
+      expect.arrayContaining(['activity', 'category']),
+    );
   });
 });

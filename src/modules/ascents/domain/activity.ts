@@ -1,4 +1,4 @@
-import type { Surface } from './surface.ts';
+import { surfaces, type Surface } from './surface.ts';
 
 /** Ways of travelling an Ascent. */
 export const activities = [
@@ -20,4 +20,11 @@ const activitiesBySurface: Record<Surface, readonly Activity[]> = {
 
 export function activitiesFor(surface: Surface): readonly Activity[] {
   return activitiesBySurface[surface];
+}
+
+/** Surfaces that allow at least one of the Activities: the reverse of `activitiesFor`. */
+export function surfacesAllowing(wanted: readonly Activity[]): Surface[] {
+  return surfaces.filter((surface) =>
+    activitiesFor(surface).some((activity) => wanted.includes(activity)),
+  );
 }

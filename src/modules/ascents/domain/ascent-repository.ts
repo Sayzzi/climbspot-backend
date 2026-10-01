@@ -1,5 +1,7 @@
 import type { Ascent, AscentSummary } from './ascent.ts';
+import type { Category } from './category.ts';
 import type { Position } from './position.ts';
+import type { Surface } from './surface.ts';
 
 export interface NearbyCriteria {
   /** Where the Visitor is. */
@@ -7,6 +9,10 @@ export interface NearbyCriteria {
   /** Metres between the position and an Ascent's Start. */
   readonly radius: number;
   readonly limit: number;
+  /** When given, only Ascents with one of these Surfaces. */
+  readonly surfaces?: readonly Surface[];
+  /** When given, only Ascents in one of these Categories. */
+  readonly categories?: readonly Category[];
 }
 
 export interface NearbyAscent {

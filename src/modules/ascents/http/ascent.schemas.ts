@@ -18,6 +18,10 @@ const gradient = (description: string) =>
 
 const surfaceSchema = z.enum(surfaces).meta({ id: 'Surface' });
 
+const activitySchema = z.enum(activities).meta({ id: 'Activity' });
+
+const categorySchema = z.enum(categories).meta({ id: 'Category' });
+
 export const ascentPointSchema = z
   .object({
     latitude: z.number().min(-90).max(90),
@@ -31,7 +35,7 @@ export const ascentSummarySchema = z
     id: z.uuid(),
     name: z.string(),
     surface: surfaceSchema,
-    activities: z.array(z.enum(activities).meta({ id: 'Activity' })),
+    activities: z.array(activitySchema),
     start: ascentPointSchema,
     top: ascentPointSchema,
     length: metres('Length along the path'),
@@ -41,7 +45,7 @@ export const ascentSummarySchema = z
     difficultyScore: z
       .number()
       .meta({ description: 'Length in metres × average Gradient in percent.' }),
-    category: z.enum(categories).meta({ id: 'Category' }),
+    category: categorySchema,
     createdAt: z.iso.datetime(),
   })
   .meta({ id: 'AscentSummary' });
@@ -79,6 +83,13 @@ export const ascentIdParamsSchema = z.object({ id: z.uuid() });
 const queryNumber = () =>
   z.preprocess((value) => (value === '' ? undefined : value), z.coerce.number());
 
+/** A query parameter that may be repeated (`?activity=a&activity=b`). */
+const repeatable = <T extends z.ZodType>(item: T) =>
+  z.preprocess(
+    (value) => (value === undefined ? undefined : [value].flat()),
+    z.array(item).optional(),
+  );
+
 export const nearbyQuerySchema = z.object({
   latitude: queryNumber().pipe(z.number().min(-90).max(90)),
   longitude: queryNumber().pipe(z.number().min(-180).max(180)),
@@ -89,6 +100,12 @@ export const nearbyQuerySchema = z.object({
     .default(NEARBY_DEFAULT_RADIUS)
     .meta({ description: 'Maximum distance to the Start, in metres.' }),
   limit: z.coerce.number().int().min(1).max(NEARBY_MAXIMUM_LIMIT).default(NEARBY_DEFAULT_LIMIT),
+  activity: repeatable(activitySchema).meta({
+    description: 'Only Ascents suitable for one of these Activities. Repeatable.',
+  }),
+  category: repeatable(categorySchema).meta({
+    description: 'Only Ascents in one of these Categories. Repeatable.',
+  }),
 });
 
 export const nearbyAscentsSchema = z
