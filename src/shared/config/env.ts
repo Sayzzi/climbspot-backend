@@ -1,21 +1,30 @@
 import { z } from 'zod';
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().int().positive().default(3000),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
-  CORS_ORIGINS: z
-    .string()
-    .default('http://localhost:5173')
-    .transform((value) =>
-      value
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean),
-    ),
-  DATABASE_URL: z.url(),
-  ELEVATION_API_URL: z.url().default('https://api.open-meteo.com/v1/elevation'),
-});
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    PORT: z.coerce.number().int().positive().default(3000),
+    LOG_LEVEL: z
+      .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+      .default('info'),
+    CORS_ORIGINS: z
+      .string()
+      .default('http://localhost:5173')
+      .transform((value) =>
+        value
+          .split(',')
+          .map((origin) => origin.trim())
+          .filter(Boolean),
+      ),
+    DATABASE_URL: z.url(),
+    ELEVATION_API_URL: z.url().default('https://api.open-meteo.com/v1/elevation'),
+    /** Temporary guard until Contributors are authenticated; off in production by default. */
+    ASCENT_CREATION_ENABLED: z.stringbool().optional(),
+  })
+  .transform(({ ASCENT_CREATION_ENABLED, ...env }) => ({
+    ...env,
+    ASCENT_CREATION_ENABLED: ASCENT_CREATION_ENABLED ?? env.NODE_ENV !== 'production',
+  }));
 
 export type Env = z.infer<typeof envSchema>;
 

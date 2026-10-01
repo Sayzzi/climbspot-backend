@@ -1,4 +1,5 @@
 import { createApp } from './app.ts';
+import { createAscentsModule, OpenMeteoElevationProvider } from './modules/ascents/index.ts';
 import { createHealthModule } from './modules/health/index.ts';
 import { loadEnv } from './shared/config/env.ts';
 import { createDatabase } from './shared/infrastructure/database.ts';
@@ -12,7 +13,14 @@ const database = createDatabase(env.DATABASE_URL);
 const app = createApp({
   logger,
   corsOrigins: env.CORS_ORIGINS,
-  modules: [createHealthModule()],
+  modules: [
+    createHealthModule(),
+    createAscentsModule({
+      db: database.db,
+      elevationProvider: new OpenMeteoElevationProvider({ baseUrl: env.ELEVATION_API_URL }),
+      creationEnabled: env.ASCENT_CREATION_ENABLED,
+    }),
+  ],
 });
 
 const server = app.listen(env.PORT, () => {
