@@ -1,0 +1,1 @@
+CREATE INDEX "ascents_start_idx" ON "ascents" USING gist ("start");

@@ -1,7 +1,13 @@
 import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 
 import { apiErrorSchema } from '../../../shared/http/api-error.ts';
-import { ascentIdParamsSchema, ascentSchema, createAscentBodySchema } from './ascent.schemas.ts';
+import {
+  ascentIdParamsSchema,
+  ascentSchema,
+  createAscentBodySchema,
+  nearbyAscentsSchema,
+  nearbyQuerySchema,
+} from './ascent.schemas.ts';
 
 const errorResponse = (description: string) => ({
   description,
@@ -33,6 +39,22 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
       503: errorResponse(
         '`ELEVATION_UNAVAILABLE`: the terrain model cannot be reached; retry later.',
       ),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: `${basePath}/nearby`,
+    operationId: 'findAscentsNearby',
+    summary: 'Find the Ascents whose Start is closest to a position',
+    tags: ['Ascents'],
+    request: { query: nearbyQuerySchema },
+    responses: {
+      200: {
+        description: 'Ascents within the radius, nearest Start first. Empty when none.',
+        content: { 'application/json': { schema: nearbyAscentsSchema } },
+      },
+      400: errorResponse('`VALIDATION_FAILED`: a query parameter is missing or out of range.'),
     },
   });
 

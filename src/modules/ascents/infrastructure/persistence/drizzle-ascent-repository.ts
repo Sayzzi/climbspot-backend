@@ -1,8 +1,12 @@
 import { eq, sql } from 'drizzle-orm';
 
 import type { Database } from '../../../../shared/infrastructure/database.ts';
-import type { AscentRepository } from '../../domain/ascent-repository.ts';
-import { startOf, topOf, type Ascent } from '../../domain/ascent.ts';
+import type {
+  AscentRepository,
+  NearbyAscent,
+  NearbyCriteria,
+} from '../../domain/ascent-repository.ts';
+import { startOf, topOf, type Ascent, type AscentEnd } from '../../domain/ascent.ts';
 import { buildProfile } from '../../domain/elevation-profile.ts';
 import type { Position } from '../../domain/position.ts';
 import { ascents } from './ascents.schema.ts';
@@ -11,18 +15,39 @@ const toWkt = ({ longitude, latitude }: Position) => `${String(longitude)} ${Str
 
 const geographyFromWkt = (wkt: string) => sql`extensions.st_geogfromtext(${`SRID=4326;${wkt}`})`;
 
-const columns = {
-  id: ascents.id,
-  name: ascents.name,
-  surface: ascents.surface,
-  path: sql<string>`extensions.st_asgeojson(${ascents.path}, 15)`.as('path'),
-  elevations: ascents.elevations,
+const pointFrom = ({ longitude, latitude }: Position) =>
+  sql`extensions.st_setsrid(extensions.st_makepoint(${longitude}, ${latitude}), 4326)::extensions.geography`;
+
+const measurementColumns = {
   length: ascents.length,
   elevationGain: ascents.elevationGain,
   averageGradient: ascents.averageGradient,
   maximumGradient: ascents.maximumGradient,
   difficultyScore: ascents.difficultyScore,
   category: ascents.category,
+};
+
+const summaryColumns = {
+  id: ascents.id,
+  name: ascents.name,
+  surface: ascents.surface,
+  start: sql<string>`extensions.st_asgeojson(${ascents.start}, 15)`.as('start'),
+  top: sql<string>`extensions.st_asgeojson(${ascents.top}, 15)`.as('top'),
+  startElevation: sql<number>`${ascents.elevations}[1]`.as('start_elevation'),
+  topElevation: sql<number>`${ascents.elevations}[array_length(${ascents.elevations}, 1)]`.as(
+    'top_elevation',
+  ),
+  ...measurementColumns,
+  createdAt: ascents.createdAt,
+};
+
+const columns = {
+  id: ascents.id,
+  name: ascents.name,
+  surface: ascents.surface,
+  path: sql<string>`extensions.st_asgeojson(${ascents.path}, 15)`.as('path'),
+  elevations: ascents.elevations,
+  ...measurementColumns,
   createdAt: ascents.createdAt,
 };
 
@@ -55,6 +80,51 @@ export class DrizzleAscentRepository implements AscentRepository {
     const [row] = await this.db.select(columns).from(ascents).where(eq(ascents.id, id));
     return row && toAscent(row);
   }
+
+  async findNearby({ position, radius, limit }: NearbyCriteria): Promise<NearbyAscent[]> {
+    const origin = pointFrom(position);
+    const distanceToStart = sql<number>`extensions.st_distance(${ascents.start}, ${origin})`;
+
+    const rows = await this.db
+      .select({ ...summaryColumns, distanceToStart: distanceToStart.as('distance_to_start') })
+      .from(ascents)
+      .where(sql`extensions.st_dwithin(${ascents.start}, ${origin}, ${radius})`)
+      .orderBy(distanceToStart, ascents.id)
+      .limit(limit);
+
+    return rows.map(
+      ({
+        id,
+        name,
+        surface,
+        start,
+        top,
+        startElevation,
+        topElevation,
+        createdAt,
+        distanceToStart,
+        ...measurements
+      }) => ({
+        ascent: {
+          id,
+          name,
+          surface,
+          start: toEnd(start, startElevation),
+          top: toEnd(top, topElevation),
+          measurements,
+          createdAt,
+        },
+        distanceToStart,
+      }),
+    );
+  }
+}
+
+function toEnd(geoJson: string, elevation: number): AscentEnd {
+  const {
+    coordinates: [longitude, latitude],
+  } = JSON.parse(geoJson) as { coordinates: [number, number] };
+  return { position: { latitude, longitude }, elevation };
 }
 
 function toAscent({

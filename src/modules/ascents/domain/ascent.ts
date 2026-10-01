@@ -7,6 +7,7 @@ import {
   type ElevationProfile,
   type ProfilePoint,
 } from './elevation-profile.ts';
+import type { Position } from './position.ts';
 import type { Surface } from './surface.ts';
 
 /** A one-way uphill path from a Start to a Top (see CONTEXT.md). */
@@ -18,6 +19,24 @@ export interface Ascent {
   readonly profile: ElevationProfile;
   readonly measurements: AscentMeasurements;
   readonly createdAt: Date;
+}
+
+/** An Ascent without its path and Elevation Profile, e.g. in search results. */
+export interface AscentSummary {
+  readonly id: string;
+  readonly name: string;
+  readonly surface: Surface;
+  readonly start: AscentEnd;
+  readonly top: AscentEnd;
+  readonly measurements: AscentMeasurements;
+  readonly createdAt: Date;
+}
+
+/** Start or Top of an Ascent. */
+export interface AscentEnd {
+  readonly position: Position;
+  /** Metres. */
+  readonly elevation: number;
 }
 
 export interface AscentMeasurements {
@@ -54,6 +73,17 @@ export function startOf(ascent: Ascent): ProfilePoint {
 
 export function topOf(ascent: Ascent): ProfilePoint {
   return lastPoint(ascent.profile);
+}
+
+export function summarize({ profile, ...ascent }: Ascent): AscentSummary {
+  const { position: startPosition, elevation: startElevation } = firstPoint(profile);
+  const { position: topPosition, elevation: topElevation } = lastPoint(profile);
+
+  return {
+    ...ascent,
+    start: { position: startPosition, elevation: startElevation },
+    top: { position: topPosition, elevation: topElevation },
+  };
 }
 
 function isUphill(profile: ElevationProfile): boolean {

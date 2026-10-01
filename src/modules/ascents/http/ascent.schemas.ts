@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+import {
+  NEARBY_DEFAULT_LIMIT,
+  NEARBY_DEFAULT_RADIUS,
+  NEARBY_MAXIMUM_LIMIT,
+  NEARBY_MAXIMUM_RADIUS,
+} from '../application/find-ascents-nearby.ts';
 import { activities } from '../domain/activity.ts';
 import { categories } from '../domain/category.ts';
 import { surfaces } from '../domain/surface.ts';
@@ -68,6 +74,34 @@ export const createAscentBodySchema = createAscentFieldsSchema.extend({
 });
 
 export const ascentIdParamsSchema = z.object({ id: z.uuid() });
+
+/** A number sent as a query string value; an empty value counts as missing. */
+const queryNumber = () =>
+  z.preprocess((value) => (value === '' ? undefined : value), z.coerce.number());
+
+export const nearbyQuerySchema = z.object({
+  latitude: queryNumber().pipe(z.number().min(-90).max(90)),
+  longitude: queryNumber().pipe(z.number().min(-180).max(180)),
+  radius: z.coerce
+    .number()
+    .positive()
+    .max(NEARBY_MAXIMUM_RADIUS)
+    .default(NEARBY_DEFAULT_RADIUS)
+    .meta({ description: 'Maximum distance to the Start, in metres.' }),
+  limit: z.coerce.number().int().min(1).max(NEARBY_MAXIMUM_LIMIT).default(NEARBY_DEFAULT_LIMIT),
+});
+
+export const nearbyAscentsSchema = z
+  .object({
+    ascents: z.array(
+      ascentSummarySchema.extend({
+        distanceToStart: metres('Geodesic distance from the searched position to the Start'),
+      }),
+    ),
+  })
+  .meta({ id: 'NearbyAscents' });
+
+export type NearbyAscentsResponse = z.infer<typeof nearbyAscentsSchema>;
 
 export type AscentSummaryResponse = z.infer<typeof ascentSummarySchema>;
 

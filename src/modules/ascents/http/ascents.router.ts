@@ -3,14 +3,20 @@ import multer from 'multer';
 import { z } from 'zod';
 
 import type { CreateAscent } from '../application/create-ascent.ts';
+import type { FindAscentsNearby } from '../application/find-ascents-nearby.ts';
 import type { GetAscent } from '../application/get-ascent.ts';
-import { toAscentResponse } from './ascent.mapper.ts';
-import { ascentIdParamsSchema, createAscentFieldsSchema } from './ascent.schemas.ts';
+import { toAscentResponse, toNearbyAscentsResponse } from './ascent.mapper.ts';
+import {
+  ascentIdParamsSchema,
+  createAscentFieldsSchema,
+  nearbyQuerySchema,
+} from './ascent.schemas.ts';
 import { readGpxPath } from './gpx.ts';
 
 export interface AscentsRouterDependencies {
   readonly createAscent: CreateAscent;
   readonly getAscent: GetAscent;
+  readonly findAscentsNearby: FindAscentsNearby;
 }
 
 const uploadSchema = createAscentFieldsSchema.extend({
@@ -20,6 +26,7 @@ const uploadSchema = createAscentFieldsSchema.extend({
 export function createAscentsRouter({
   createAscent,
   getAscent,
+  findAscentsNearby,
 }: AscentsRouterDependencies): Router {
   const router = Router();
   const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1 } });
@@ -31,6 +38,19 @@ export function createAscentsRouter({
     const ascent = await createAscent.execute({ name, surface, path });
 
     res.status(201).json(toAscentResponse(ascent));
+  });
+
+  // Declared before `/:id`, which would otherwise capture it.
+  router.get('/nearby', async (req, res) => {
+    const { latitude, longitude, radius, limit } = nearbyQuerySchema.parse(req.query);
+
+    const results = await findAscentsNearby.execute({
+      position: { latitude, longitude },
+      radius,
+      limit,
+    });
+
+    res.json(toNearbyAscentsResponse(results));
   });
 
   router.get('/:id', async (req, res) => {

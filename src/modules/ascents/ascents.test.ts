@@ -1,9 +1,7 @@
-import type { Express } from 'express';
-import { pino } from 'pino';
 import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { createTestDatabase, type TestDatabase } from '../../../test/database.ts';
+import { useAscentsApp, uploadGpx as upload } from '../../../test/ascents-app.ts';
 import { gpxRoute, gpxTrack } from '../../../test/gpx.ts';
 import {
   northOf,
@@ -12,54 +10,8 @@ import {
   terrainRisingNorth,
   uniformSlope,
 } from '../../../test/terrain.ts';
-import { createApp } from '../../app.ts';
-import { createDatabase, type DatabaseConnection } from '../../shared/infrastructure/database.ts';
-import type { ElevationProvider } from './domain/elevation-provider.ts';
-import { createAscentsModule } from './index.ts';
 
-let testDatabase: TestDatabase;
-let connection: DatabaseConnection;
-
-beforeAll(async () => {
-  testDatabase = await createTestDatabase();
-  connection = createDatabase(testDatabase.url);
-});
-
-afterAll(async () => {
-  await connection.close();
-  await testDatabase.drop();
-});
-
-beforeEach(() => testDatabase.truncate());
-
-interface AppOptions {
-  readonly terrain?: ElevationProvider;
-  readonly creationEnabled?: boolean;
-}
-
-function buildApp({
-  terrain = uniformSlope(0.08),
-  creationEnabled = true,
-}: AppOptions = {}): Express {
-  return createApp({
-    logger: pino({ level: 'silent' }),
-    corsOrigins: [],
-    modules: [
-      createAscentsModule({ db: connection.db, elevationProvider: terrain, creationEnabled }),
-    ],
-  });
-}
-
-function upload(app: Express, gpx: string, fields: { name?: string; surface?: string } = {}) {
-  return request(app)
-    .post('/ascents')
-    .field('name', fields.name ?? 'Côte de test')
-    .field('surface', fields.surface ?? 'paved')
-    .attach('gpx', Buffer.from(gpx), {
-      filename: 'ascent.gpx',
-      contentType: 'application/gpx+xml',
-    });
-}
+const buildApp = useAscentsApp();
 
 describe('POST /ascents', () => {
   it('creates an Ascent and computes its measurements from the terrain', async () => {
