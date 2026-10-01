@@ -28,7 +28,10 @@ Requirements: Node.js ≥ 22.12 (see `.nvmrc`) and pnpm (`corepack enable`).
 pnpm install
 cp .env.example .env   # then fill in DATABASE_URL
 pnpm dev               # http://localhost:3000/health
+pnpm db:migrate        # apply migrations (enables PostGIS on first run)
 ```
+
+Tests need **Docker** running: the suite starts a PostGIS container once per run (`test/global-setup.ts`) and gives each test file its own freshly migrated database, created from a template (`test/database.ts`).
 
 ## Scripts
 
@@ -79,7 +82,7 @@ Dependency rules are enforced by `eslint-plugin-boundaries` (see `eslint.config.
 
 ### Errors
 
-Business rule violations extend `DomainError` with a stable `code` (e.g. `ASCENT_NOT_FOUND`) and a `kind` (`invalid`, `not_found`, `conflict`, `unauthorized`, `forbidden`). The error handler maps the kind to an HTTP status and always answers with the `ApiError` shape:
+Business rule violations extend `DomainError` with a stable `code` (e.g. `ASCENT_NOT_FOUND`) and a `kind` (`invalid`, `not_found`, `conflict`, `unauthorized`, `forbidden`, `unavailable`). The error handler maps the kind to an HTTP status and always answers with the `ApiError` shape:
 
 ```json
 { "error": { "code": "ROUTE_NOT_FOUND", "message": "No route matches GET /nope." } }

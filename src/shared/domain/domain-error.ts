@@ -1,4 +1,11 @@
-export type DomainErrorKind = 'invalid' | 'not_found' | 'conflict' | 'unauthorized' | 'forbidden';
+export type DomainErrorKind =
+  | 'invalid'
+  | 'not_found'
+  | 'conflict'
+  | 'unauthorized'
+  | 'forbidden'
+  /** A dependency the operation relies on is temporarily down; retrying later may succeed. */
+  | 'unavailable';
 
 /**
  * Base class for every business rule violation.

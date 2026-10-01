@@ -13,10 +13,18 @@ class SampleNotFoundError extends DomainError {
   readonly kind = 'not_found';
 }
 
+class SampleUnavailableError extends DomainError {
+  readonly code = 'SAMPLE_UNAVAILABLE';
+  readonly kind = 'unavailable';
+}
+
 function createFailingModule(): HttpModule {
   const router = Router();
   router.get('/domain', () => {
     throw new SampleNotFoundError('Sample 42 does not exist.');
+  });
+  router.get('/unavailable', () => {
+    throw new SampleUnavailableError('The sample service is down.');
   });
   router.get('/unexpected', () => {
     throw new Error('boom');
@@ -65,6 +73,15 @@ describe('createApp', () => {
     expect(response.status).toBe(404);
     expect(response.body).toEqual({
       error: { code: 'SAMPLE_NOT_FOUND', message: 'Sample 42 does not exist.' },
+    });
+  });
+
+  it('reports unavailable dependencies as 503 with their stable code', async () => {
+    const response = await request(buildApp()).get('/failing/unavailable');
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      error: { code: 'SAMPLE_UNAVAILABLE', message: 'The sample service is down.' },
     });
   });
 

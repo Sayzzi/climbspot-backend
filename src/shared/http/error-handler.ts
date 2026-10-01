@@ -10,6 +10,7 @@ const statusByKind: Record<DomainErrorKind, number> = {
   conflict: 409,
   unauthorized: 401,
   forbidden: 403,
+  unavailable: 503,
 };
 
 /** Translates any thrown error into an {@link ApiError} response. Must be registered last. */

@@ -9,8 +9,13 @@ export interface DatabaseConnection {
 }
 
 export function createDatabase(url: string): DatabaseConnection {
-  // Supabase's transaction pooler does not support prepared statements.
-  const client = postgres(url, { prepare: false });
+  const client = postgres(url, {
+    // Supabase's transaction pooler does not support prepared statements.
+    prepare: false,
+    // PostGIS lives in the `extensions` schema (see the first migration).
+    connection: { search_path: '"$user", public, extensions' },
+    onnotice: () => undefined,
+  });
 
   return {
     db: drizzle({ client }),
