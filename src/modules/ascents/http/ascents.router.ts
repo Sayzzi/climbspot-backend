@@ -1,7 +1,8 @@
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 
+import { BadRequestError } from '../../../shared/http/bad-request-error.ts';
 import type { CreateAscent } from '../application/create-ascent.ts';
 import type { FindAscentsNearby } from '../application/find-ascents-nearby.ts';
 import type { GetAscent } from '../application/get-ascent.ts';
@@ -11,7 +12,10 @@ import {
   createAscentFieldsSchema,
   nearbyQuerySchema,
 } from './ascent.schemas.ts';
-import { readGpxPath } from './gpx.ts';
+import { GpxTooLargeError, readGpxPath } from './gpx.ts';
+
+/** Largest GPX file accepted, in bytes. */
+export const MAXIMUM_GPX_FILE_SIZE = 5 * 1024 * 1024;
 
 export interface AscentsRouterDependencies {
   readonly createAscent: CreateAscent;
@@ -29,9 +33,8 @@ export function createAscentsRouter({
   findAscentsNearby,
 }: AscentsRouterDependencies): Router {
   const router = Router();
-  const upload = multer({ storage: multer.memoryStorage(), limits: { files: 1 } });
 
-  router.post('/', upload.single('gpx'), async (req, res) => {
+  router.post('/', receiveGpxFile(), async (req, res) => {
     const { name, surface, gpx } = uploadSchema.parse({ ...req.body, gpx: req.file });
     const path = readGpxPath(gpx.buffer.toString('utf8'));
 
@@ -60,4 +63,26 @@ export function createAscentsRouter({
   });
 
   return router;
+}
+
+/** Reads the `gpx` file of a multipart request into memory, enforcing the size limit. */
+function receiveGpxFile(): RequestHandler {
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { files: 1, fileSize: MAXIMUM_GPX_FILE_SIZE },
+  }).single('gpx');
+
+  return (req, res, next) => {
+    upload(req, res, (error: unknown) => {
+      if (error instanceof multer.MulterError) {
+        next(
+          error.code === 'LIMIT_FILE_SIZE'
+            ? new GpxTooLargeError(`The file exceeds ${String(MAXIMUM_GPX_FILE_SIZE)} bytes.`)
+            : new BadRequestError(error.message),
+        );
+        return;
+      }
+      next(error);
+    });
+  };
 }

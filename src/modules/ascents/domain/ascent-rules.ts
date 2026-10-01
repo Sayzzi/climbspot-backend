@@ -11,3 +11,22 @@ export const SMOOTHING_WINDOW = 5;
 
 /** Shortest stretch over which the maximum Gradient is measured, in metres. */
 export const MAXIMUM_GRADIENT_STRETCH = 100;
+
+/** Longest path accepted as an Ascent, in metres. */
+export const MAXIMUM_LENGTH = 50_000;
+
+/** Most points a path may have before resampling. */
+export const MAXIMUM_PATH_POINTS = 20_000;
+
+/** Flattest average Gradient of an Ascent (ratio). */
+export const MINIMUM_AVERAGE_GRADIENT = 0.03;
+
+/** Smallest Elevation Gain of an Ascent, in metres. */
+export const MINIMUM_ELEVATION_GAIN = 10;
+
+/**
+ * Height an Ascent may lose in Dips: the larger of a fixed allowance (metres)
+ * and a share of its Elevation Gain.
+ */
+export const DIP_ALLOWANCE = 10;
+export const DIP_ALLOWANCE_RATIO = 0.1;

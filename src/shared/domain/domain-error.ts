@@ -4,6 +4,8 @@ export type DomainErrorKind =
   | 'conflict'
   | 'unauthorized'
   | 'forbidden'
+  /** The input exceeds a size limit. */
+  | 'too_large'
   /** A dependency the operation relies on is temporarily down; retrying later may succeed. */
   | 'unavailable';
 

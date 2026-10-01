@@ -10,6 +10,7 @@ const statusByKind: Record<DomainErrorKind, number> = {
   conflict: 409,
   unauthorized: 401,
   forbidden: 403,
+  too_large: 413,
   unavailable: 503,
 };
 

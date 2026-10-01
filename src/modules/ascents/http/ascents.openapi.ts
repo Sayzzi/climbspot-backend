@@ -36,6 +36,17 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
       403: errorResponse(
         '`ASCENT_CREATION_DISABLED`: creating Ascents is disabled on this server.',
       ),
+      413: errorResponse(
+        '`GPX_TOO_LARGE`: the file exceeds 5 MB or its path has more than 20,000 points.',
+      ),
+      422: errorResponse(
+        [
+          'The upload cannot become an Ascent:',
+          '`GPX_INVALID` (not a valid GPX file), `GPX_EMPTY` (no track or route with two distinct points),',
+          '`ASCENT_TOO_LONG` (over 50 km), `ASCENT_TOO_LOW` (gains under 10 m),',
+          '`ASCENT_TOO_FLAT` (averages under 3 %) or `ASCENT_DIP_TOO_LARGE` (loses too much height in Dips).',
+        ].join(' '),
+      ),
       503: errorResponse(
         '`ELEVATION_UNAVAILABLE`: the terrain model cannot be reached; retry later.',
       ),

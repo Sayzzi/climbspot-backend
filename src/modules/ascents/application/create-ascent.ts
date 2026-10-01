@@ -1,4 +1,5 @@
 import { DomainError } from '../../../shared/domain/domain-error.ts';
+import { ensureNotTooLong } from '../domain/ascent-eligibility.ts';
 import { SAMPLING_SPACING, SMOOTHING_WINDOW } from '../domain/ascent-rules.ts';
 import type { AscentRepository } from '../domain/ascent-repository.ts';
 import { createAscent, type Ascent } from '../domain/ascent.ts';
@@ -43,6 +44,8 @@ export class CreateAscent {
     if (!creationEnabled) {
       throw new AscentCreationDisabledError();
     }
+
+    ensureNotTooLong(path);
 
     const positions = resample(path, SAMPLING_SPACING);
     const elevations = smooth(await elevationProvider.elevationsAt(positions), SMOOTHING_WINDOW);

@@ -1,3 +1,4 @@
+import { ensureEligible } from './ascent-eligibility.ts';
 import { MAXIMUM_GRADIENT_STRETCH } from './ascent-rules.ts';
 import { categoryFor, type Category } from './category.ts';
 import {
@@ -62,9 +63,16 @@ export interface NewAscent {
   readonly createdAt: Date;
 }
 
+/**
+ * Turns a surveyed path into an Ascent.
+ *
+ * @throws when the path does not qualify as an Ascent (see `ensureEligible`).
+ */
 export function createAscent({ profile, ...identity }: NewAscent): Ascent {
   const uphill = isUphill(profile) ? profile : reverse(profile);
-  return { ...identity, profile: uphill, measurements: measure(uphill) };
+  const measurements = measure(uphill);
+  ensureEligible(uphill, measurements);
+  return { ...identity, profile: uphill, measurements };
 }
 
 export function startOf(ascent: Ascent): ProfilePoint {
