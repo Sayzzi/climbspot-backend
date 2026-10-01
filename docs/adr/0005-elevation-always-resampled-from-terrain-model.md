@@ -1,0 +1,3 @@
+# Elevation is always resampled from the terrain model
+
+An Ascent can be created from an uploaded GPX file or by drawing it on the map (snapped to roads and trails through a routing provider). Whatever the source, only the 2D path is kept: its Elevation Profile is resampled from a digital elevation model, smoothed, and only then are Elevation Gain, Gradient and Difficulty Score computed. GPX elevations are noisy (GPS or uncalibrated barometers) and drawn paths carry none, so trusting the source would make Ascents incomparable. The elevation source sits behind an `ElevationProvider` port; we start with the Open-Meteo Elevation API (Copernicus DEM, ~90 m resolution, free, no key) and may move to a self-hosted 30 m dataset if short Ascents come out inaccurate.

@@ -1,0 +1,3 @@
+# Hexagonal modules with manual dependency injection
+
+The API is a modular monolith. Each business module (`src/modules/<name>/`) is split into `domain/` (no dependencies), `application/` (use cases depending only on domain ports), `infrastructure/` (adapters implementing those ports) and `http/` (Express routers and DTOs), and exposes itself only through its `index.ts`. Dependencies are wired by hand in the composition root (`src/server.ts`) through constructor injection, with no DI container: the graph stays explicit, needs no decorators or `reflect-metadata`, and tests swap adapters by passing in-memory implementations. Import rules between layers and modules are enforced by `eslint-plugin-boundaries`, so a violation fails CI rather than code review.

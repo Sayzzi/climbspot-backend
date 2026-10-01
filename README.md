@@ -1,0 +1,100 @@
+# ClimbSpot — Backend
+
+REST API for ClimbSpot: find uphill paths (**Ascents**) near you for running, trail running and cycling, and catalogue new ones.
+
+- Domain vocabulary: [`CONTEXT.md`](./CONTEXT.md)
+- Architecture decisions: [`docs/adr/`](./docs/adr/)
+- Frontend: [climbspot-frontend](https://github.com/Sayzzi/climbspot-frontend)
+
+## Stack
+
+| Concern         | Choice                                                                                                      |
+| --------------- | ----------------------------------------------------------------------------------------------------------- |
+| Runtime         | Node.js 22 (ESM)                                                                                            |
+| HTTP            | Express 5, helmet, cors                                                                                     |
+| Validation      | zod 4                                                                                                       |
+| API contract    | OpenAPI 3.1 generated from zod schemas, served at `GET /openapi.json`                                       |
+| Database        | PostgreSQL + PostGIS on Supabase, accessed with Drizzle ORM + postgres.js                                   |
+| Auth (upcoming) | Supabase Auth — the API verifies the JWTs it issues                                                         |
+| Logging         | pino (pretty in development, JSON otherwise)                                                                |
+| Tests           | Vitest + supertest                                                                                          |
+| Quality         | TypeScript strict, ESLint (typescript-eslint strict + boundaries), Prettier, husky, lint-staged, commitlint |
+
+## Getting started
+
+Requirements: Node.js ≥ 22.12 (see `.nvmrc`) and pnpm (`corepack enable`).
+
+```bash
+pnpm install
+cp .env.example .env   # then fill in DATABASE_URL
+pnpm dev               # http://localhost:3000/health
+```
+
+## Scripts
+
+| Script                                          | Purpose                                        |
+| ----------------------------------------------- | ---------------------------------------------- |
+| `pnpm dev`                                      | Start the API with hot reload                  |
+| `pnpm build` / `pnpm start`                     | Compile to `dist/` and run the compiled output |
+| `pnpm test` / `test:watch` / `test:coverage`    | Run the test suite                             |
+| `pnpm lint` / `lint:fix`                        | Lint, including architectural boundaries       |
+| `pnpm format` / `format:check`                  | Format with Prettier                           |
+| `pnpm typecheck`                                | Type-check sources, tests and config files     |
+| `pnpm db:generate` / `db:migrate` / `db:studio` | Drizzle migrations and studio                  |
+
+## Architecture
+
+A modular monolith where every business module follows a hexagonal layout ([ADR 0002](./docs/adr/0002-hexagonal-modules-with-manual-injection.md)):
+
+```
+src/
+├── modules/
+│   └── <module>/
+│       ├── domain/          # entities, value objects, repository ports, domain errors — no dependencies
+│       ├── application/     # use cases, depending only on domain ports
+│       ├── infrastructure/  # adapters implementing the ports (Drizzle, external APIs)
+│       ├── http/            # Express routers, zod DTOs, OpenAPI registration
+│       └── index.ts         # wires the module and exposes it as an HttpModule
+├── shared/
+│   ├── config/              # environment validation
+│   ├── domain/              # DomainError and other shared kernel types
+│   ├── http/                # error handling, OpenAPI document, HttpModule contract
+│   └── infrastructure/      # logger, database connection
+├── app.ts                   # createApp(deps): pure HTTP application, used by tests
+└── server.ts                # composition root: reads env, wires dependencies, listens
+```
+
+Dependency rules are enforced by `eslint-plugin-boundaries` (see `eslint.config.js`):
+
+- `domain` depends on nothing but the shared domain, and may not import frameworks, drivers or Node I/O.
+- `application` depends on `domain`; `infrastructure` and `http` depend inwards, never on each other.
+- A module never reaches into another module's layers.
+- Only the composition root (`app.ts`, `server.ts`) imports module entry points.
+
+### Adding a module
+
+1. Create `src/modules/<name>/` with the four layers.
+2. Expose a `create<Name>Module(deps): HttpModule` from its `index.ts`.
+3. Register it in `src/server.ts`. `app.ts` does not change.
+
+### Errors
+
+Business rule violations extend `DomainError` with a stable `code` (e.g. `ASCENT_NOT_FOUND`) and a `kind` (`invalid`, `not_found`, `conflict`, `unauthorized`, `forbidden`). The error handler maps the kind to an HTTP status and always answers with the `ApiError` shape:
+
+```json
+{ "error": { "code": "ROUTE_NOT_FOUND", "message": "No route matches GET /nope." } }
+```
+
+Messages are for developers. Clients translate `code`, never `message`.
+
+### Conventions
+
+- Code, identifiers, commits and documentation are written in English, using the vocabulary from `CONTEXT.md`.
+- Measurements are stored in SI units (metres, ratios); conversion happens in the frontend.
+- Relative imports use the `.ts` extension; `tsc` rewrites them to `.js` at build time.
+- Tests live next to the code they cover (`*.test.ts`).
+- Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`…), enforced by commitlint.
+
+## Deployment
+
+The API is a long-running Node.js process and is deployed on a container host (Render, Railway or Fly.io); Supabase only provides the database and authentication ([ADR 0001](./docs/adr/0001-express-api-hosted-outside-supabase.md)). Configuration comes exclusively from environment variables, documented in `.env.example`. Build with `pnpm build` and start with `pnpm start`.
