@@ -79,8 +79,9 @@ describe('POST /ascents measurements', () => {
     const dense = await upload(buildApp(), gpxTrack(straightNorth(REFERENCE, 1000, 400)));
 
     expect(sparse.body.length).toBeCloseTo(dense.body.length as number, 0);
-    expect(sparse.body.elevationProfile).toHaveLength(41);
-    expect(dense.body.elevationProfile).toHaveLength(41);
+    // Sampled every 100 m, close to the terrain model's resolution.
+    expect(sparse.body.elevationProfile).toHaveLength(11);
+    expect(dense.body.elevationProfile).toHaveLength(11);
   });
 
   it.each([

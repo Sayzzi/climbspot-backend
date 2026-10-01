@@ -76,7 +76,7 @@ describe('OpenMeteoElevationProvider', () => {
 
   const failures: [string, typeof fetch][] = [
     ['the network fails', () => Promise.reject(new TypeError('fetch failed'))],
-    ['the API answers an error status', () => Promise.resolve(new Response('', { status: 429 }))],
+    ['the API answers an error status', () => Promise.resolve(new Response('', { status: 500 }))],
     ['the body is not JSON', () => Promise.resolve(new Response('<html>'))],
     ['the body has no elevations', () => Promise.resolve(Response.json({ reason: 'oops' }))],
     ['an elevation is missing', () => Promise.resolve(Response.json({ elevation: [12] }))],
@@ -96,6 +96,68 @@ describe('OpenMeteoElevationProvider', () => {
       code: 'ELEVATION_UNAVAILABLE',
       kind: 'unavailable',
     });
+  });
+
+  it('waits and retries when the API is rate limited', async () => {
+    let calls = 0;
+    const waits: number[] = [];
+    const rateLimitedOnce: typeof fetch = (input, init) => {
+      calls += 1;
+      return calls === 1
+        ? Promise.resolve(new Response('', { status: 429 }))
+        : fakeOpenMeteo()(input, init);
+    };
+    const provider = new OpenMeteoElevationProvider({
+      baseUrl,
+      fetch: rateLimitedOnce,
+      sleep: (ms) => {
+        waits.push(ms);
+        return Promise.resolve();
+      },
+    });
+
+    await expect(provider.elevationsAt(positionsAlongMeridian(2))).resolves.toEqual([0, 1]);
+    expect(calls).toBe(2);
+    expect(waits).toEqual([1000]);
+  });
+
+  it('honours the delay the API asks for, within reason', async () => {
+    const waits: number[] = [];
+    let calls = 0;
+    const provider = new OpenMeteoElevationProvider({
+      baseUrl,
+      fetch: (input, init) => {
+        calls += 1;
+        return calls === 1
+          ? Promise.resolve(new Response('', { status: 429, headers: { 'Retry-After': '3' } }))
+          : fakeOpenMeteo()(input, init);
+      },
+      sleep: (ms) => {
+        waits.push(ms);
+        return Promise.resolve();
+      },
+    });
+
+    await provider.elevationsAt(positionsAlongMeridian(2));
+
+    expect(waits).toEqual([3000]);
+  });
+
+  it('gives up after a few rate-limited attempts', async () => {
+    let calls = 0;
+    const provider = new OpenMeteoElevationProvider({
+      baseUrl,
+      fetch: () => {
+        calls += 1;
+        return Promise.resolve(new Response('', { status: 429 }));
+      },
+      sleep: () => Promise.resolve(),
+    });
+
+    await expect(provider.elevationsAt(positionsAlongMeridian(2))).rejects.toBeInstanceOf(
+      ElevationUnavailableError,
+    );
+    expect(calls).toBe(3);
   });
 
   it('reports the elevation as unavailable when the API is too slow', async () => {

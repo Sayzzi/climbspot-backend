@@ -33,12 +33,13 @@ async function expectRefusal(app: Express, gpx: string | Buffer, status: number,
 
 /**
  * Rises at a steady rate over `length` metres to `gain`, with a Dip of `depth`
- * metres between 40 % and 50 % of the way. Smoothing softens the Dip: once
- * measured, depths 14, 18, 27 and 30 m become about 8.3, 11.7, 19.2 and 21.7 m.
+ * metres between 40 % and 60 % of the way. Sampling every 100 m and smoothing
+ * soften the Dip: on 3 km, measured depths are about two thirds of `depth`
+ * (13 → 8.7 m, 17 → 11.3 m, 40 → 26.7 m, 48 → 32 m).
  */
 function terrainWithDip(length: number, gain: number, depth: number): ElevationProvider {
-  const [dipStart, dipEnd] = [0.4 * length, 0.5 * length];
-  const beforeDip = (gain * 0.4) / 0.9 + depth * (0.4 / 0.9);
+  const [dipStart, dipEnd] = [0.4 * length, 0.6 * length];
+  const beforeDip = ((gain + depth) * 0.4) / 0.8;
   return terrainRisingNorth((north) => {
     if (north <= dipStart) {
       return (beforeDip / dipStart) * north;
@@ -111,41 +112,39 @@ describe('POST /ascents refusals: not an Ascent', () => {
 });
 
 describe('POST /ascents refusals: Dips', () => {
-  it('tolerates a Dip under 10 m on an Ascent gaining 50 m', async () => {
+  const threeKilometres = gpxTrack(straightNorth(REFERENCE, 3000));
+
+  it('tolerates a Dip under 10 m on an Ascent gaining under 100 m', async () => {
     const response = await uploadGpx(
-      buildApp({ terrain: terrainWithDip(1000, 50, 14) }),
-      oneKilometre,
+      buildApp({ terrain: terrainWithDip(3000, 95, 13) }),
+      threeKilometres,
     );
 
     expect(response.status).toBe(201);
   });
 
-  it('refuses a Dip over 10 m on an Ascent gaining 50 m with ASCENT_DIP_TOO_LARGE', async () => {
+  it('refuses a Dip over 10 m on an Ascent gaining under 100 m with ASCENT_DIP_TOO_LARGE', async () => {
     await expectRefusal(
-      buildApp({ terrain: terrainWithDip(1000, 50, 18) }),
-      oneKilometre,
+      buildApp({ terrain: terrainWithDip(3000, 95, 17) }),
+      threeKilometres,
       422,
       'ASCENT_DIP_TOO_LARGE',
     );
   });
 
   it('tolerates a Dip under 10 % of the Elevation Gain when that exceeds 10 m', async () => {
-    const twoKilometres = gpxTrack(straightNorth(REFERENCE, 2000));
-
     const response = await uploadGpx(
-      buildApp({ terrain: terrainWithDip(2000, 200, 27) }),
-      twoKilometres,
+      buildApp({ terrain: terrainWithDip(3000, 300, 40) }),
+      threeKilometres,
     );
 
     expect(response.status).toBe(201);
   });
 
   it('refuses a Dip over 10 % of the Elevation Gain when that exceeds 10 m', async () => {
-    const twoKilometres = gpxTrack(straightNorth(REFERENCE, 2000));
-
     await expectRefusal(
-      buildApp({ terrain: terrainWithDip(2000, 200, 30) }),
-      twoKilometres,
+      buildApp({ terrain: terrainWithDip(3000, 300, 48) }),
+      threeKilometres,
       422,
       'ASCENT_DIP_TOO_LARGE',
     );
