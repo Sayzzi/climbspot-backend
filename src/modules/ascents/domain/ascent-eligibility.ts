@@ -13,7 +13,7 @@ import {
 } from './ascent-rules.ts';
 import type { AscentMeasurements } from './ascent.ts';
 import type { ElevationProfile } from './elevation-profile.ts';
-import { distanceBetween } from './geodesy.ts';
+import { lengthOf } from './geodesy.ts';
 import type { Position } from './position.ts';
 
 const percent = (ratio: number) => `${String(Math.round(ratio * 1000) / 10)} %`;
@@ -21,14 +21,7 @@ const metres = (value: number) => `${String(Math.round(value * 10) / 10)} m`;
 
 /** Refuses paths too long to be an Ascent, before any elevation is fetched. */
 export function ensureNotTooLong(path: readonly Position[]): void {
-  let length = 0;
-  for (const [index, position] of path.entries()) {
-    const previous = path[index - 1];
-    if (previous !== undefined) {
-      length += distanceBetween(previous, position);
-    }
-  }
-
+  const length = lengthOf(path);
   if (length > MAXIMUM_LENGTH) {
     throw new AscentTooLongError(
       `The path is ${metres(length)} long; an Ascent is at most ${metres(MAXIMUM_LENGTH)}.`,

@@ -7,6 +7,7 @@ import {
   NEARBY_MAXIMUM_RADIUS,
 } from '../application/find-ascents-nearby.ts';
 import { activities } from '../domain/activity.ts';
+import { MAXIMUM_GRADIENT_STRETCH } from '../domain/ascent-rules.ts';
 import { categories } from '../domain/category.ts';
 import { surfaces } from '../domain/surface.ts';
 
@@ -41,7 +42,9 @@ export const ascentSummarySchema = z
     length: metres('Length along the path'),
     elevationGain: metres('Top elevation minus Start elevation'),
     averageGradient: gradient('Average Gradient'),
-    maximumGradient: gradient('Steepest Gradient over at least 100 m'),
+    maximumGradient: gradient(
+      `Steepest Gradient over at least ${String(MAXIMUM_GRADIENT_STRETCH)} m`,
+    ),
     difficultyScore: z
       .number()
       .meta({ description: 'Length in metres × average Gradient in percent.' }),
@@ -79,31 +82,21 @@ export const createAscentBodySchema = createAscentFieldsSchema.extend({
 
 export const ascentIdParamsSchema = z.object({ id: z.uuid() });
 
-/** A number sent as a query string value; an empty value counts as missing. */
-const queryNumber = () =>
-  z.preprocess((value) => (value === '' ? undefined : value), z.coerce.number());
-
-/** A query parameter that may be repeated (`?activity=a&activity=b`). */
-const repeatable = <T extends z.ZodType>(item: T) =>
-  z.preprocess(
-    (value) => (value === undefined ? undefined : [value].flat()),
-    z.array(item).optional(),
-  );
-
+/** Query of the nearby search, once normalised from strings (see the router). */
 export const nearbyQuerySchema = z.object({
-  latitude: queryNumber().pipe(z.number().min(-90).max(90)),
-  longitude: queryNumber().pipe(z.number().min(-180).max(180)),
-  radius: z.coerce
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  radius: z
     .number()
     .positive()
     .max(NEARBY_MAXIMUM_RADIUS)
     .default(NEARBY_DEFAULT_RADIUS)
     .meta({ description: 'Maximum distance to the Start, in metres.' }),
-  limit: z.coerce.number().int().min(1).max(NEARBY_MAXIMUM_LIMIT).default(NEARBY_DEFAULT_LIMIT),
-  activity: repeatable(activitySchema).meta({
+  limit: z.number().int().min(1).max(NEARBY_MAXIMUM_LIMIT).default(NEARBY_DEFAULT_LIMIT),
+  activity: z.array(activitySchema).optional().meta({
     description: 'Only Ascents suitable for one of these Activities. Repeatable.',
   }),
-  category: repeatable(categorySchema).meta({
+  category: z.array(categorySchema).optional().meta({
     description: 'Only Ascents in one of these Categories. Repeatable.',
   }),
 });

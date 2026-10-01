@@ -27,14 +27,14 @@ export interface AscentSummary {
   readonly id: string;
   readonly name: string;
   readonly surface: Surface;
-  readonly start: AscentEnd;
-  readonly top: AscentEnd;
+  readonly start: AscentPoint;
+  readonly top: AscentPoint;
   readonly measurements: AscentMeasurements;
   readonly createdAt: Date;
 }
 
-/** Start or Top of an Ascent. */
-export interface AscentEnd {
+/** The Start or the Top of an Ascent. */
+export interface AscentPoint {
   readonly position: Position;
   /** Metres. */
   readonly elevation: number;
@@ -49,7 +49,7 @@ export interface AscentMeasurements {
   readonly averageGradient: number;
   /** Ratio, over the steepest stretch of at least MAXIMUM_GRADIENT_STRETCH metres. */
   readonly maximumGradient: number;
-  /** Length in metres × average Gradient in percent (ADR 0006). */
+  /** Length in metres × average Gradient in percent, rounded to an integer (ADR 0006). */
   readonly difficultyScore: number;
   readonly category: Category;
 }
@@ -83,15 +83,11 @@ export function topOf(ascent: Ascent): ProfilePoint {
   return lastPoint(ascent.profile);
 }
 
-export function summarize({ profile, ...ascent }: Ascent): AscentSummary {
-  const { position: startPosition, elevation: startElevation } = firstPoint(profile);
-  const { position: topPosition, elevation: topElevation } = lastPoint(profile);
+export function summarize(ascent: Ascent): AscentSummary {
+  const { profile: _profile, ...identity } = ascent;
+  const toPoint = ({ position, elevation }: ProfilePoint): AscentPoint => ({ position, elevation });
 
-  return {
-    ...ascent,
-    start: { position: startPosition, elevation: startElevation },
-    top: { position: topPosition, elevation: topElevation },
-  };
+  return { ...identity, start: toPoint(startOf(ascent)), top: toPoint(topOf(ascent)) };
 }
 
 function isUphill(profile: ElevationProfile): boolean {
@@ -104,7 +100,8 @@ function measure(profile: ElevationProfile): AscentMeasurements {
   const length = top.distance;
   const elevationGain = top.elevation - start.elevation;
   const averageGradient = length > 0 ? elevationGain / length : 0;
-  const difficultyScore = length * averageGradient * 100;
+  // Rounded before deriving the Category, so the two always agree.
+  const difficultyScore = Math.round(length * averageGradient * 100);
 
   return {
     length,

@@ -82,11 +82,13 @@ Dependency rules are enforced by `eslint-plugin-boundaries` (see `eslint.config.
 
 ### Errors
 
-Business rule violations extend `DomainError` with a stable `code` (e.g. `ASCENT_NOT_FOUND`) and a `kind` (`invalid`, `not_found`, `conflict`, `unauthorized`, `forbidden`, `unavailable`). The error handler maps the kind to an HTTP status and always answers with the `ApiError` shape:
+Business rule violations extend `DomainError` with a stable `code` (e.g. `ASCENT_NOT_FOUND`) and a `kind` (`invalid` → 422, `not_found` → 404, `conflict` → 409, `unauthorized` → 401, `forbidden` → 403, `too_large` → 413, `unavailable` → 503). The error handler maps the kind to an HTTP status and always answers with the `ApiError` shape:
 
 ```json
 { "error": { "code": "ROUTE_NOT_FOUND", "message": "No route matches GET /nope." } }
 ```
+
+Malformed requests (schema failures, unexpected multipart fields) answer 400 `VALIDATION_FAILED`.
 
 Messages are for developers. Clients translate `code`, never `message`.
 

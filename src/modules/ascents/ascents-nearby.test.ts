@@ -4,13 +4,13 @@ import { describe, expect, it } from 'vitest';
 
 import { uploadGpx, useAscentsApp } from '../../../test/ascents-app.ts';
 import { gpxTrack } from '../../../test/gpx.ts';
-import { northOf, ORIGIN, straightNorth, uniformSlope } from '../../../test/terrain.ts';
+import { northOf, REFERENCE, straightNorth, uniformGradient } from '../../../test/terrain.ts';
 
 const buildApp = useAscentsApp();
 
-/** Catalogues a 1.2 km Ascent at 8 % (Cat 4) whose Start lies `distanceNorth` metres north of ORIGIN. */
+/** Catalogues a 1.2 km Ascent at 8 % (Cat 4) whose Start lies `distanceNorth` metres north of REFERENCE. */
 async function ascentStartingNorth(app: Express, name: string, distanceNorth: number) {
-  const [start] = northOf(ORIGIN, distanceNorth);
+  const [start] = northOf(REFERENCE, distanceNorth);
   if (start === undefined) {
     throw new Error('unreachable');
   }
@@ -24,7 +24,7 @@ function searchNearby(
 ) {
   return request(app)
     .get('/ascents/nearby')
-    .query({ latitude: ORIGIN.latitude, longitude: ORIGIN.longitude, ...query });
+    .query({ latitude: REFERENCE.latitude, longitude: REFERENCE.longitude, ...query });
 }
 
 const names = (body: { ascents: { name: string }[] }) => body.ascents.map((ascent) => ascent.name);
@@ -91,8 +91,8 @@ describe('GET /ascents/nearby', () => {
 
   it('ignores Ascents whose path, but not Start, is within the radius', async () => {
     const app = buildApp();
-    // Starts 3 km away and climbs towards the search position, ending 1 km from it.
-    const [start] = northOf(ORIGIN, -3000);
+    // Starts 3 km away and goes up towards the searched position, ending 1 km from it.
+    const [start] = northOf(REFERENCE, -3000);
     if (start === undefined) {
       throw new Error('unreachable');
     }
@@ -146,10 +146,23 @@ describe('GET /ascents/nearby', () => {
     expect(response.status).toBe(200);
   });
 
-  it('is described in the OpenAPI document', async () => {
+  it('is described in the OpenAPI document with required, bounded coordinates', async () => {
     const response = await request(buildApp()).get('/openapi.json');
 
-    expect(response.body).toMatchObject({ paths: { '/ascents/nearby': { get: {} } } });
+    const parameters = response.body.paths['/ascents/nearby'].get.parameters as {
+      name: string;
+      required?: boolean;
+      schema: Record<string, unknown>;
+    }[];
+    const byName = Object.fromEntries(parameters.map((parameter) => [parameter.name, parameter]));
+    expect(byName.latitude).toMatchObject({
+      required: true,
+      schema: { type: 'number', minimum: -90, maximum: 90 },
+    });
+    expect(byName.longitude).toMatchObject({
+      required: true,
+      schema: { type: 'number', minimum: -180, maximum: 180 },
+    });
   });
 });
 
@@ -160,7 +173,7 @@ describe('GET /ascents/nearby filters', () => {
    */
   async function catalogue() {
     const at = (distanceNorth: number) => {
-      const [start] = northOf(ORIGIN, distanceNorth);
+      const [start] = northOf(REFERENCE, distanceNorth);
       if (start === undefined) {
         throw new Error('unreachable');
       }
@@ -173,7 +186,7 @@ describe('GET /ascents/nearby filters', () => {
       length: number,
       distanceNorth: number,
     ) => {
-      const app = buildApp({ terrain: uniformSlope(gradient) });
+      const app = buildApp({ terrain: uniformGradient(gradient) });
       const response = await uploadGpx(app, gpxTrack(straightNorth(at(distanceNorth), length)), {
         name,
         surface,

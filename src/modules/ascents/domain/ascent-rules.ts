@@ -15,6 +15,9 @@ export const MAXIMUM_GRADIENT_STRETCH = 100;
 /** Longest path accepted as an Ascent, in metres. */
 export const MAXIMUM_LENGTH = 50_000;
 
+/** Largest GPX file accepted, in bytes. */
+export const MAXIMUM_GPX_FILE_SIZE = 5 * 1024 * 1024;
+
 /** Most points a path may have before resampling. */
 export const MAXIMUM_PATH_POINTS = 20_000;
 

@@ -53,7 +53,7 @@ export function lastPoint(profile: ElevationProfile): ProfilePoint {
 
 /**
  * Centred moving average. Near both ends the window shrinks symmetrically, so the
- * first and last elevations are kept and a uniform slope stays exactly uniform.
+ * first and last elevations are kept and a uniform Gradient stays exactly uniform.
  */
 export function smooth(elevations: readonly number[], window: number): number[] {
   const halfWindow = Math.floor(window / 2);

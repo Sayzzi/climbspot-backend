@@ -8,6 +8,7 @@ import { GetAscent } from './application/get-ascent.ts';
 import type { ElevationProvider } from './domain/elevation-provider.ts';
 import { registerAscentsOpenApi } from './http/ascents.openapi.ts';
 import { createAscentsRouter } from './http/ascents.router.ts';
+import { readGpxPath } from './infrastructure/gpx/gpx-path-reader.ts';
 import { DrizzleAscentRepository } from './infrastructure/persistence/drizzle-ascent-repository.ts';
 
 export { OpenMeteoElevationProvider } from './infrastructure/open-meteo-elevation-provider.ts';
@@ -40,7 +41,7 @@ export function createAscentsModule({
 
   return {
     basePath,
-    router: createAscentsRouter({ createAscent, getAscent, findAscentsNearby }),
+    router: createAscentsRouter({ createAscent, getAscent, findAscentsNearby, readGpxPath }),
     registerOpenApi: (registry) => {
       registerAscentsOpenApi(registry, basePath);
     },

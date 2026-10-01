@@ -1,6 +1,6 @@
 import { activitiesFor } from '../domain/activity.ts';
 import type { NearbyAscent } from '../domain/ascent-repository.ts';
-import { summarize, type Ascent, type AscentEnd, type AscentSummary } from '../domain/ascent.ts';
+import { summarize, type Ascent, type AscentPoint, type AscentSummary } from '../domain/ascent.ts';
 import type {
   AscentResponse,
   AscentSummaryResponse,
@@ -15,7 +15,7 @@ const round = (value: number, decimals: number) => {
 /** ~1 cm precision. */
 const coordinate = (value: number) => round(value, 7);
 
-const end = ({ position, elevation }: AscentEnd) => ({
+const point = ({ position, elevation }: AscentPoint) => ({
   latitude: coordinate(position.latitude),
   longitude: coordinate(position.longitude),
   elevation: round(elevation, 1),
@@ -29,13 +29,13 @@ export function toAscentSummaryResponse(ascent: AscentSummary): AscentSummaryRes
     name: ascent.name,
     surface: ascent.surface,
     activities: [...activitiesFor(ascent.surface)],
-    start: end(ascent.start),
-    top: end(ascent.top),
+    start: point(ascent.start),
+    top: point(ascent.top),
     length: round(measurements.length, 1),
     elevationGain: round(measurements.elevationGain, 1),
     averageGradient: round(measurements.averageGradient, 4),
     maximumGradient: round(measurements.maximumGradient, 4),
-    difficultyScore: Math.round(measurements.difficultyScore),
+    difficultyScore: measurements.difficultyScore,
     category: measurements.category,
     createdAt: ascent.createdAt.toISOString(),
   };

@@ -8,7 +8,7 @@ import type { ElevationProvider } from '../src/modules/ascents/domain/elevation-
 import { createAscentsModule } from '../src/modules/ascents/index.ts';
 import { createDatabase, type DatabaseConnection } from '../src/shared/infrastructure/database.ts';
 import { createTestDatabase, type TestDatabase } from './database.ts';
-import { uniformSlope } from './terrain.ts';
+import { uniformGradient } from './terrain.ts';
 
 export interface AscentsAppOptions {
   readonly terrain?: ElevationProvider;
@@ -35,7 +35,7 @@ export function useAscentsApp(): (options?: AscentsAppOptions) => Express {
 
   beforeEach(() => testDatabase.truncate());
 
-  return ({ terrain = uniformSlope(0.08), creationEnabled = true } = {}) =>
+  return ({ terrain = uniformGradient(0.08), creationEnabled = true } = {}) =>
     createApp({
       logger: pino({ level: 'silent' }),
       corsOrigins: [],

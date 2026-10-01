@@ -6,7 +6,7 @@ import type {
   NearbyAscent,
   NearbyCriteria,
 } from '../../domain/ascent-repository.ts';
-import { startOf, topOf, type Ascent, type AscentEnd } from '../../domain/ascent.ts';
+import { startOf, topOf, type Ascent, type AscentPoint } from '../../domain/ascent.ts';
 import { buildProfile } from '../../domain/elevation-profile.ts';
 import type { Position } from '../../domain/position.ts';
 import { ascents } from './ascents.schema.ts';
@@ -41,7 +41,7 @@ const summaryColumns = {
   createdAt: ascents.createdAt,
 };
 
-const columns = {
+const ascentColumns = {
   id: ascents.id,
   name: ascents.name,
   surface: ascents.surface,
@@ -52,7 +52,7 @@ const columns = {
 };
 
 type AscentRow = {
-  [K in keyof typeof columns]: K extends 'path'
+  [K in keyof typeof ascentColumns]: K extends 'path'
     ? string
     : (typeof ascents.$inferSelect)[K & keyof typeof ascents.$inferSelect];
 };
@@ -77,7 +77,7 @@ export class DrizzleAscentRepository implements AscentRepository {
   }
 
   async findById(id: string): Promise<Ascent | undefined> {
-    const [row] = await this.db.select(columns).from(ascents).where(eq(ascents.id, id));
+    const [row] = await this.db.select(ascentColumns).from(ascents).where(eq(ascents.id, id));
     return row && toAscent(row);
   }
 
@@ -88,15 +88,15 @@ export class DrizzleAscentRepository implements AscentRepository {
     surfaces,
     categories,
   }: NearbyCriteria): Promise<NearbyAscent[]> {
-    const origin = pointFrom(position);
-    const distanceToStart = sql<number>`extensions.st_distance(${ascents.start}, ${origin})`;
+    const searchedPosition = pointFrom(position);
+    const distanceToStart = sql<number>`extensions.st_distance(${ascents.start}, ${searchedPosition})`;
 
     const rows = await this.db
       .select({ ...summaryColumns, distanceToStart: distanceToStart.as('distance_to_start') })
       .from(ascents)
       .where(
         and(
-          sql`extensions.st_dwithin(${ascents.start}, ${origin}, ${radius})`,
+          sql`extensions.st_dwithin(${ascents.start}, ${searchedPosition}, ${radius})`,
           surfaces && inArray(ascents.surface, [...surfaces]),
           categories && inArray(ascents.category, [...categories]),
         ),
@@ -121,8 +121,8 @@ export class DrizzleAscentRepository implements AscentRepository {
           id,
           name,
           surface,
-          start: toEnd(start, startElevation),
-          top: toEnd(top, topElevation),
+          start: toAscentPoint(start, startElevation),
+          top: toAscentPoint(top, topElevation),
           measurements,
           createdAt,
         },
@@ -132,7 +132,7 @@ export class DrizzleAscentRepository implements AscentRepository {
   }
 }
 
-function toEnd(geoJson: string, elevation: number): AscentEnd {
+function toAscentPoint(geoJson: string, elevation: number): AscentPoint {
   const {
     coordinates: [longitude, latitude],
   } = JSON.parse(geoJson) as { coordinates: [number, number] };

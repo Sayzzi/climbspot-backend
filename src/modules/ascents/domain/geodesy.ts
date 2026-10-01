@@ -25,3 +25,15 @@ export function interpolate(from: Position, to: Position, fraction: number): Pos
     longitude: from.longitude + (to.longitude - from.longitude) * fraction,
   };
 }
+
+/** Length of a path along its positions, in metres. */
+export function lengthOf(path: readonly Position[]): number {
+  let length = 0;
+  for (const [index, position] of path.entries()) {
+    const previous = path[index - 1];
+    if (previous !== undefined) {
+      length += distanceBetween(previous, position);
+    }
+  }
+  return length;
+}

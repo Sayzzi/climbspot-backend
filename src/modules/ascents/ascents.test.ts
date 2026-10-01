@@ -5,17 +5,17 @@ import { useAscentsApp, uploadGpx as upload } from '../../../test/ascents-app.ts
 import { gpxRoute, gpxTrack } from '../../../test/gpx.ts';
 import {
   northOf,
-  ORIGIN,
+  REFERENCE,
   straightNorth,
   terrainRisingNorth,
-  uniformSlope,
+  uniformGradient,
 } from '../../../test/terrain.ts';
 
 const buildApp = useAscentsApp();
 
 describe('POST /ascents', () => {
   it('creates an Ascent and computes its measurements from the terrain', async () => {
-    const response = await upload(buildApp(), gpxTrack(straightNorth(ORIGIN, 1000)), {
+    const response = await upload(buildApp(), gpxTrack(straightNorth(REFERENCE, 1000)), {
       name: 'Côte de test',
       surface: 'paved',
     });
@@ -43,7 +43,7 @@ describe('POST /ascents measurements', () => {
       north <= 500 ? 200 + 0.05 * north : 225 + 0.12 * (north - 500),
     );
 
-    const response = await upload(buildApp({ terrain }), gpxTrack(straightNorth(ORIGIN, 1000)));
+    const response = await upload(buildApp({ terrain }), gpxTrack(straightNorth(REFERENCE, 1000)));
 
     expect(response.status).toBe(201);
     expect(response.body.elevationGain).toBeCloseTo(85, 1);
@@ -52,7 +52,7 @@ describe('POST /ascents measurements', () => {
   });
 
   it('turns a path recorded downhill the right way up', async () => {
-    const downhill = straightNorth(ORIGIN, 1000).toReversed();
+    const downhill = straightNorth(REFERENCE, 1000).toReversed();
 
     const response = await upload(buildApp(), gpxTrack(downhill));
 
@@ -63,7 +63,7 @@ describe('POST /ascents measurements', () => {
   });
 
   it('ignores the elevations recorded in the file', async () => {
-    const noisy = straightNorth(ORIGIN, 1000).map((position, index) => ({
+    const noisy = straightNorth(REFERENCE, 1000).map((position, index) => ({
       ...position,
       elevation: index % 2 === 0 ? 5000 : -300,
     }));
@@ -75,8 +75,8 @@ describe('POST /ascents measurements', () => {
   });
 
   it('measures the same Ascent whatever the density of the recorded points', async () => {
-    const sparse = await upload(buildApp(), gpxTrack(straightNorth(ORIGIN, 1000, 3)));
-    const dense = await upload(buildApp(), gpxTrack(straightNorth(ORIGIN, 1000, 400)));
+    const sparse = await upload(buildApp(), gpxTrack(straightNorth(REFERENCE, 1000, 3)));
+    const dense = await upload(buildApp(), gpxTrack(straightNorth(REFERENCE, 1000, 400)));
 
     expect(sparse.body.length).toBeCloseTo(dense.body.length as number, 0);
     expect(sparse.body.elevationProfile).toHaveLength(41);
@@ -90,8 +90,8 @@ describe('POST /ascents measurements', () => {
     [0.161, 'cat3'],
   ])('puts 1 km at a %s Gradient in the %s Category', async (gradient, category) => {
     const response = await upload(
-      buildApp({ terrain: uniformSlope(gradient) }),
-      gpxTrack(straightNorth(ORIGIN, 1000)),
+      buildApp({ terrain: uniformGradient(gradient) }),
+      gpxTrack(straightNorth(REFERENCE, 1000)),
     );
 
     expect(response.body.category).toBe(category);
@@ -103,8 +103,8 @@ describe('POST /ascents measurements', () => {
     [10_000, 0.081, 'hc'],
   ])('puts %s m at a %s Gradient in the %s Category', async (length, gradient, category) => {
     const response = await upload(
-      buildApp({ terrain: uniformSlope(gradient) }),
-      gpxTrack(straightNorth(ORIGIN, length)),
+      buildApp({ terrain: uniformGradient(gradient) }),
+      gpxTrack(straightNorth(REFERENCE, length)),
     );
 
     expect(response.body.category).toBe(category);
@@ -117,7 +117,9 @@ describe('POST /ascents Surfaces and Activities', () => {
     ['gravel', ['running', 'trail_running', 'gravel_cycling', 'mountain_biking']],
     ['trail', ['trail_running', 'mountain_biking']],
   ])('derives the Activities of a %s Ascent from its Surface', async (surface, activities) => {
-    const response = await upload(buildApp(), gpxTrack(straightNorth(ORIGIN, 1000)), { surface });
+    const response = await upload(buildApp(), gpxTrack(straightNorth(REFERENCE, 1000)), {
+      surface,
+    });
 
     expect(response.body.surface).toBe(surface);
     expect(response.body.activities).toEqual(activities);
@@ -126,7 +128,7 @@ describe('POST /ascents Surfaces and Activities', () => {
 
 describe('POST /ascents GPX files', () => {
   it('joins all the segments of the first track', async () => {
-    const [first, second] = [northOf(ORIGIN, 0, 250, 500), northOf(ORIGIN, 500, 750, 1000)];
+    const [first, second] = [northOf(REFERENCE, 0, 250, 500), northOf(REFERENCE, 500, 750, 1000)];
 
     const response = await upload(buildApp(), gpxTrack(first, second));
 
@@ -134,10 +136,20 @@ describe('POST /ascents GPX files', () => {
   });
 
   it('falls back to the first route when the file has no track', async () => {
-    const response = await upload(buildApp(), gpxRoute(straightNorth(ORIGIN, 600)));
+    const response = await upload(buildApp(), gpxRoute(straightNorth(REFERENCE, 600)));
 
     expect(response.status).toBe(201);
     expect(response.body.length).toBeCloseTo(600, 0);
+  });
+});
+
+describe('POST /ascents Difficulty Score', () => {
+  it('reports an integer Difficulty Score consistent with its Category', async () => {
+    // 1 km at 8 % sits exactly on the Cat 4 threshold of 8,000.
+    const response = await upload(buildApp(), gpxTrack(straightNorth(REFERENCE, 1000)));
+
+    expect(response.body.difficultyScore).toBe(8000);
+    expect(response.body.category).toBe('cat4');
   });
 });
 
@@ -145,7 +157,16 @@ describe('POST /ascents creation guard', () => {
   it('refuses to create Ascents when creation is disabled', async () => {
     const app = buildApp({ creationEnabled: false });
 
-    const response = await upload(app, gpxTrack(straightNorth(ORIGIN, 1000)));
+    const response = await upload(app, gpxTrack(straightNorth(REFERENCE, 1000)));
+
+    expect(response.status).toBe(403);
+    expect(response.body).toMatchObject({ error: { code: 'ASCENT_CREATION_DISABLED' } });
+  });
+
+  it('refuses before reading the request when creation is disabled', async () => {
+    const app = buildApp({ creationEnabled: false });
+
+    const response = await request(app).post('/ascents').field('surface', 'asphalt');
 
     expect(response.status).toBe(403);
     expect(response.body).toMatchObject({ error: { code: 'ASCENT_CREATION_DISABLED' } });
@@ -155,7 +176,7 @@ describe('POST /ascents creation guard', () => {
 describe('GET /ascents/:id', () => {
   it('returns a created Ascent with its path and Elevation Profile', async () => {
     const app = buildApp();
-    const created = await upload(app, gpxTrack(straightNorth(ORIGIN, 1000)), { name: 'Le Mur' });
+    const created = await upload(app, gpxTrack(straightNorth(REFERENCE, 1000)), { name: 'Le Mur' });
 
     const response = await request(app).get(`/ascents/${created.body.id as string}`);
 

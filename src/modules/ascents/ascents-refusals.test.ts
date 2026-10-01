@@ -4,17 +4,22 @@ import { describe, expect, it } from 'vitest';
 
 import { uploadGpx, useAscentsApp } from '../../../test/ascents-app.ts';
 import { gpxTrack, type GpxPoint } from '../../../test/gpx.ts';
-import { ORIGIN, straightNorth, terrainRisingNorth, uniformSlope } from '../../../test/terrain.ts';
+import {
+  REFERENCE,
+  straightNorth,
+  terrainRisingNorth,
+  uniformGradient,
+} from '../../../test/terrain.ts';
 import { ElevationUnavailableError, type ElevationProvider } from './domain/elevation-provider.ts';
 
 const buildApp = useAscentsApp();
 
-const oneKilometre = gpxTrack(straightNorth(ORIGIN, 1000));
+const oneKilometre = gpxTrack(straightNorth(REFERENCE, 1000));
 
 async function catalogueIsEmpty(app: Express): Promise<boolean> {
   const response = await request(app)
     .get('/ascents/nearby')
-    .query({ latitude: ORIGIN.latitude, longitude: ORIGIN.longitude, radius: 50_000 });
+    .query({ latitude: REFERENCE.latitude, longitude: REFERENCE.longitude, radius: 50_000 });
   return response.body.ascents.length === 0;
 }
 
@@ -27,7 +32,7 @@ async function expectRefusal(app: Express, gpx: string | Buffer, status: number,
 }
 
 /**
- * Climbs at a steady rate over `length` metres to `gain`, with a Dip of `depth`
+ * Rises at a steady rate over `length` metres to `gain`, with a Dip of `depth`
  * metres between 40 % and 50 % of the way. Smoothing softens the Dip: once
  * measured, depths 14, 18, 27 and 30 m become about 8.3, 11.7, 19.2 and 21.7 m.
  */
@@ -49,7 +54,7 @@ function terrainWithDip(length: number, gain: number, depth: number): ElevationP
 describe('POST /ascents refusals: not an Ascent', () => {
   it('refuses a path flatter than 3 % with ASCENT_TOO_FLAT', async () => {
     await expectRefusal(
-      buildApp({ terrain: uniformSlope(0.029) }),
+      buildApp({ terrain: uniformGradient(0.029) }),
       oneKilometre,
       422,
       'ASCENT_TOO_FLAT',
@@ -57,16 +62,16 @@ describe('POST /ascents refusals: not an Ascent', () => {
   });
 
   it('accepts a path just steeper than 3 %', async () => {
-    const response = await uploadGpx(buildApp({ terrain: uniformSlope(0.031) }), oneKilometre);
+    const response = await uploadGpx(buildApp({ terrain: uniformGradient(0.031) }), oneKilometre);
 
     expect(response.status).toBe(201);
   });
 
   it('refuses a path gaining less than 10 m with ASCENT_TOO_LOW', async () => {
-    const twoHundredMetres = gpxTrack(straightNorth(ORIGIN, 200));
+    const twoHundredMetres = gpxTrack(straightNorth(REFERENCE, 200));
 
     await expectRefusal(
-      buildApp({ terrain: uniformSlope(0.049) }),
+      buildApp({ terrain: uniformGradient(0.049) }),
       twoHundredMetres,
       422,
       'ASCENT_TOO_LOW',
@@ -74,23 +79,31 @@ describe('POST /ascents refusals: not an Ascent', () => {
   });
 
   it('accepts a path gaining just over 10 m', async () => {
-    const twoHundredMetres = gpxTrack(straightNorth(ORIGIN, 200));
+    const twoHundredMetres = gpxTrack(straightNorth(REFERENCE, 200));
 
-    const response = await uploadGpx(buildApp({ terrain: uniformSlope(0.051) }), twoHundredMetres);
+    const response = await uploadGpx(
+      buildApp({ terrain: uniformGradient(0.051) }),
+      twoHundredMetres,
+    );
 
     expect(response.status).toBe(201);
   });
 
   it('refuses a path longer than 50 km with ASCENT_TOO_LONG', async () => {
-    const tooLong = gpxTrack(straightNorth(ORIGIN, 50_100));
+    const tooLong = gpxTrack(straightNorth(REFERENCE, 50_100));
 
-    await expectRefusal(buildApp({ terrain: uniformSlope(0.03) }), tooLong, 422, 'ASCENT_TOO_LONG');
+    await expectRefusal(
+      buildApp({ terrain: uniformGradient(0.03) }),
+      tooLong,
+      422,
+      'ASCENT_TOO_LONG',
+    );
   });
 
   it('accepts a path just shorter than 50 km', async () => {
     const response = await uploadGpx(
-      buildApp({ terrain: uniformSlope(0.031) }),
-      gpxTrack(straightNorth(ORIGIN, 49_900)),
+      buildApp({ terrain: uniformGradient(0.031) }),
+      gpxTrack(straightNorth(REFERENCE, 49_900)),
     );
 
     expect(response.status).toBe(201);
@@ -117,7 +130,7 @@ describe('POST /ascents refusals: Dips', () => {
   });
 
   it('tolerates a Dip under 10 % of the Elevation Gain when that exceeds 10 m', async () => {
-    const twoKilometres = gpxTrack(straightNorth(ORIGIN, 2000));
+    const twoKilometres = gpxTrack(straightNorth(REFERENCE, 2000));
 
     const response = await uploadGpx(
       buildApp({ terrain: terrainWithDip(2000, 200, 27) }),
@@ -128,7 +141,7 @@ describe('POST /ascents refusals: Dips', () => {
   });
 
   it('refuses a Dip over 10 % of the Elevation Gain when that exceeds 10 m', async () => {
-    const twoKilometres = gpxTrack(straightNorth(ORIGIN, 2000));
+    const twoKilometres = gpxTrack(straightNorth(REFERENCE, 2000));
 
     await expectRefusal(
       buildApp({ terrain: terrainWithDip(2000, 200, 30) }),
@@ -148,6 +161,10 @@ describe('POST /ascents refusals: files', () => {
       gpxTrack([{ latitude: 45, longitude: 6 }]).replace('lon="6"', ''),
     ],
     [
+      'has a point with an empty latitude',
+      gpxTrack(straightNorth(REFERENCE, 1000)).replace('lat="45"', 'lat=""'),
+    ],
+    [
       'has a point out of range',
       gpxTrack([
         { latitude: 95, longitude: 6 },
@@ -164,6 +181,7 @@ describe('POST /ascents refusals: files', () => {
       '<?xml version="1.0"?><gpx version="1.1"><wpt lat="45" lon="6"/></gpx>',
     ],
     ['has an empty track', gpxTrack([])],
+    ['is an empty GPX document', '<?xml version="1.0"?><gpx/>'],
     ['has a single point', gpxTrack([{ latitude: 45, longitude: 6 }])],
     [
       'repeats the same point',
@@ -181,13 +199,13 @@ describe('POST /ascents refusals: files', () => {
   });
 
   it('refuses a path of more than 20,000 points with GPX_TOO_LARGE', async () => {
-    const points: GpxPoint[] = straightNorth(ORIGIN, 1000, 20_001);
+    const points: GpxPoint[] = straightNorth(REFERENCE, 1000, 20_001);
 
     await expectRefusal(buildApp(), gpxTrack(points), 413, 'GPX_TOO_LARGE');
   });
 
   it('accepts a path of exactly 20,000 points', async () => {
-    const response = await uploadGpx(buildApp(), gpxTrack(straightNorth(ORIGIN, 1000, 20_000)));
+    const response = await uploadGpx(buildApp(), gpxTrack(straightNorth(REFERENCE, 1000, 20_000)));
 
     expect(response.status).toBe(201);
   });
@@ -240,6 +258,28 @@ describe('POST /ascents refusals: fields', () => {
 
   it('refuses a request without a GPX file with VALIDATION_FAILED', async () => {
     const response = await send(buildApp(), { name: 'Côte', surface: 'paved' }, false);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({ error: { code: 'VALIDATION_FAILED' } });
+  });
+
+  it('refuses a file sent under another field name with VALIDATION_FAILED', async () => {
+    const response = await request(buildApp())
+      .post('/ascents')
+      .field('name', 'Côte')
+      .field('surface', 'paved')
+      .attach('track', Buffer.from(oneKilometre), { filename: 'ascent.gpx' });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({ error: { code: 'VALIDATION_FAILED' } });
+  });
+
+  it('refuses two GPX files with VALIDATION_FAILED', async () => {
+    const response = await send(buildApp(), { name: 'Côte', surface: 'paved' }).attach(
+      'gpx',
+      Buffer.from(oneKilometre),
+      { filename: 'second.gpx' },
+    );
 
     expect(response.status).toBe(400);
     expect(response.body).toMatchObject({ error: { code: 'VALIDATION_FAILED' } });

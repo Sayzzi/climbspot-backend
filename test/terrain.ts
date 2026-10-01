@@ -1,7 +1,5 @@
-import type {
-  ElevationProvider,
-  Position,
-} from '../src/modules/ascents/domain/elevation-provider.ts';
+import type { ElevationProvider } from '../src/modules/ascents/domain/elevation-provider.ts';
+import type { Position } from '../src/modules/ascents/domain/position.ts';
 
 /**
  * Length of one degree of latitude in metres, on the mean-radius sphere used by
@@ -9,7 +7,8 @@ import type {
  */
 export const METRES_PER_DEGREE_OF_LATITUDE = 111_195.08;
 
-export const ORIGIN: Position = { latitude: 45, longitude: 6 };
+/** Where test terrains are anchored and where searches are made from. */
+export const REFERENCE: Position = { latitude: 45, longitude: 6 };
 
 /** Positions due north of `from`, at the given distances in metres. */
 export function northOf(from: Position, ...distances: number[]): Position[] {
@@ -27,7 +26,7 @@ export function straightNorth(from: Position, length: number, points = 11): Posi
   );
 }
 
-/** Terrain whose elevation depends only on the distance north of ORIGIN. */
+/** Terrain whose elevation depends only on the distance north of REFERENCE. */
 export function terrainRisingNorth(
   elevationAt: (metresNorth: number) => number,
 ): ElevationProvider {
@@ -35,13 +34,13 @@ export function terrainRisingNorth(
     elevationsAt: (positions) =>
       Promise.resolve(
         positions.map((position) =>
-          elevationAt((position.latitude - ORIGIN.latitude) * METRES_PER_DEGREE_OF_LATITUDE),
+          elevationAt((position.latitude - REFERENCE.latitude) * METRES_PER_DEGREE_OF_LATITUDE),
         ),
       ),
   };
 }
 
-/** Uniform slope: `gradient` metres up per metre north, starting at `base` metres. */
-export function uniformSlope(gradient: number, base = 200): ElevationProvider {
+/** Uniform Gradient: `gradient` metres up per metre north, starting at `base` metres. */
+export function uniformGradient(gradient: number, base = 200): ElevationProvider {
   return terrainRisingNorth((metresNorth) => base + gradient * metresNorth);
 }

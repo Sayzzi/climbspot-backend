@@ -1,10 +1,7 @@
 import { z } from 'zod';
 
-import {
-  ElevationUnavailableError,
-  type ElevationProvider,
-  type Position,
-} from '../domain/elevation-provider.ts';
+import { ElevationUnavailableError, type ElevationProvider } from '../domain/elevation-provider.ts';
+import type { Position } from '../domain/position.ts';
 
 /** Open-Meteo accepts at most 100 coordinates per request. */
 const MAX_POSITIONS_PER_REQUEST = 100;

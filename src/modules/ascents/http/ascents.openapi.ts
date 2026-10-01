@@ -2,12 +2,27 @@ import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 
 import { apiErrorSchema } from '../../../shared/http/api-error.ts';
 import {
+  DIP_ALLOWANCE,
+  DIP_ALLOWANCE_RATIO,
+  MAXIMUM_GPX_FILE_SIZE,
+  MAXIMUM_LENGTH,
+  MAXIMUM_PATH_POINTS,
+  MINIMUM_AVERAGE_GRADIENT,
+  MINIMUM_ELEVATION_GAIN,
+} from '../domain/ascent-rules.ts';
+import {
   ascentIdParamsSchema,
   ascentSchema,
   createAscentBodySchema,
   nearbyAscentsSchema,
   nearbyQuerySchema,
 } from './ascent.schemas.ts';
+
+// Descriptions are built from the domain rules so they never drift from them.
+const megabytes = (bytes: number) => `${String(bytes / 1024 / 1024)} MB`;
+const kilometres = (metres: number) => `${String(metres / 1000)} km`;
+const percent = (ratio: number) => `${String(ratio * 100)} %`;
+const count = (value: number) => value.toLocaleString('en');
 
 const errorResponse = (description: string) => ({
   description,
@@ -37,14 +52,14 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
         '`ASCENT_CREATION_DISABLED`: creating Ascents is disabled on this server.',
       ),
       413: errorResponse(
-        '`GPX_TOO_LARGE`: the file exceeds 5 MB or its path has more than 20,000 points.',
+        `\`GPX_TOO_LARGE\`: the file exceeds ${megabytes(MAXIMUM_GPX_FILE_SIZE)} or its path has more than ${count(MAXIMUM_PATH_POINTS)} points.`,
       ),
       422: errorResponse(
         [
           'The upload cannot become an Ascent:',
           '`GPX_INVALID` (not a valid GPX file), `GPX_EMPTY` (no track or route with two distinct points),',
-          '`ASCENT_TOO_LONG` (over 50 km), `ASCENT_TOO_LOW` (gains under 10 m),',
-          '`ASCENT_TOO_FLAT` (averages under 3 %) or `ASCENT_DIP_TOO_LARGE` (loses too much height in Dips).',
+          `\`ASCENT_TOO_LONG\` (over ${kilometres(MAXIMUM_LENGTH)}), \`ASCENT_TOO_LOW\` (gains under ${String(MINIMUM_ELEVATION_GAIN)} m),`,
+          `\`ASCENT_TOO_FLAT\` (averages under ${percent(MINIMUM_AVERAGE_GRADIENT)}) or \`ASCENT_DIP_TOO_LARGE\` (loses more than the larger of ${String(DIP_ALLOWANCE)} m and ${percent(DIP_ALLOWANCE_RATIO)} of its Elevation Gain in Dips).`,
         ].join(' '),
       ),
       503: errorResponse(

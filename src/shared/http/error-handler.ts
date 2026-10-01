@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 
 import { DomainError, type DomainErrorKind } from '../domain/domain-error.ts';
 import { toApiError } from './api-error.ts';
+import { RequestValidationError } from './request-validation-error.ts';
 
 const statusByKind: Record<DomainErrorKind, number> = {
   invalid: 422,
@@ -23,6 +24,11 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, req, res, _nex
 
   if (error instanceof ZodError) {
     res.status(400).json(toApiError('VALIDATION_FAILED', 'The request is invalid.', error.issues));
+    return;
+  }
+
+  if (error instanceof RequestValidationError) {
+    res.status(400).json(toApiError('VALIDATION_FAILED', error.message));
     return;
   }
 
