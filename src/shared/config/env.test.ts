@@ -14,7 +14,23 @@ describe('loadEnv', () => {
       LOG_LEVEL: 'info',
       CORS_ORIGINS: ['http://localhost:5173'],
       DATABASE_URL: databaseUrl,
+      ELEVATION_API_URL: 'https://api.open-meteo.com/v1/elevation',
     });
+  });
+
+  it('accepts another elevation API endpoint', () => {
+    const env = loadEnv({
+      DATABASE_URL: databaseUrl,
+      ELEVATION_API_URL: 'https://dem.example.com/v1/elevation',
+    });
+
+    expect(env.ELEVATION_API_URL).toBe('https://dem.example.com/v1/elevation');
+  });
+
+  it('rejects an elevation API endpoint that is not a URL', () => {
+    expect(() => loadEnv({ DATABASE_URL: databaseUrl, ELEVATION_API_URL: 'nope' })).toThrow(
+      /ELEVATION_API_URL/,
+    );
   });
 
   it('splits and trims the list of CORS origins', () => {

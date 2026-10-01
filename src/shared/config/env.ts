@@ -14,6 +14,7 @@ const envSchema = z.object({
         .filter(Boolean),
     ),
   DATABASE_URL: z.url(),
+  ELEVATION_API_URL: z.url().default('https://api.open-meteo.com/v1/elevation'),
 });
 
 export type Env = z.infer<typeof envSchema>;
