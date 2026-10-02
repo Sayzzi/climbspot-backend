@@ -36,6 +36,10 @@ _Avoid_: Slope, Grade, Incline, Pente
 The height difference between an Ascent's Top and its Start; descending stretches in between are not added back.
 _Avoid_: Climbing, Vertical, Cumulative gain, Dénivelé
 
+**Height Gained**:
+The sum of every rise along an Itinerary, counted however often the path goes up and down. On a Loop it says how hard the Loop is, where the Elevation Gain is zero.
+_Avoid_: D+, Total ascent, Cumulative gain
+
 **Dip**:
 A descending stretch inside an Ascent. Small Dips are tolerated; an Ascent that loses too much height along the way is two Ascents.
 _Avoid_: Drop, False flat, Descent
@@ -73,7 +77,7 @@ An Itinerary that goes up from one point to another, as close as possible to the
 _Avoid_: Climb, Suggested Ascent, Montée
 
 **Relief**:
-How much a Loop goes up and down overall: flat, rolling or hilly.
+How much a Loop goes up and down overall, judged by its Height Gained per kilometre: flat, rolling or hilly.
 _Avoid_: Terrain, Profile, Difficulty
 
 ### People
