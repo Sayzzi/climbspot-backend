@@ -1,5 +1,5 @@
 import type { ElevationProvider } from '../src/modules/ascents/domain/elevation-provider.ts';
-import type { Position } from '../src/modules/ascents/domain/position.ts';
+import type { Position } from '../src/shared/domain/position.ts';
 
 /**
  * Length of one degree of latitude in metres, on the mean-radius sphere used by

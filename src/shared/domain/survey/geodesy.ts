@@ -1,4 +1,4 @@
-import type { Position } from './position.ts';
+import type { Position } from '../position.ts';
 
 /** Mean Earth radius (IUGG), in metres. */
 const EARTH_RADIUS = 6_371_008.8;

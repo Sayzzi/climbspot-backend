@@ -4,13 +4,13 @@ import {
   PATH_SIMPLIFICATION_TOLERANCE,
   SAMPLING_SPACING,
   SMOOTHING_WINDOW,
-} from '../domain/ascent-rules.ts';
+} from '../../../shared/domain/survey/survey-rules.ts';
 import type { AscentRepository } from '../domain/ascent-repository.ts';
 import { createAscent, type Ascent } from '../domain/ascent.ts';
 import type { ElevationProvider } from '../domain/elevation-provider.ts';
-import { buildProfile, smooth } from '../domain/elevation-profile.ts';
-import { resample, simplify } from '../domain/path.ts';
-import type { Position } from '../domain/position.ts';
+import { buildProfile, smooth } from '../../../shared/domain/survey/elevation-profile.ts';
+import { resample, simplify } from '../../../shared/domain/survey/path.ts';
+import type { Position } from '../../../shared/domain/position.ts';
 import type { Surface } from '../domain/surface.ts';
 
 export interface CreateAscentInput {

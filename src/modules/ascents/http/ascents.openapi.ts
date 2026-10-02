@@ -2,14 +2,13 @@ import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 
 import { apiErrorSchema } from '../../../shared/http/api-error.ts';
 import {
-  DIP_ALLOWANCE,
-  DIP_ALLOWANCE_RATIO,
   MAXIMUM_GPX_FILE_SIZE,
   MAXIMUM_LENGTH,
   MAXIMUM_PATH_POINTS,
   MINIMUM_AVERAGE_GRADIENT,
   MINIMUM_ELEVATION_GAIN,
 } from '../domain/ascent-rules.ts';
+import { DIP_ALLOWANCE, DIP_ALLOWANCE_RATIO } from '../../../shared/domain/survey/survey-rules.ts';
 import {
   ascentIdParamsSchema,
   ascentSchema,

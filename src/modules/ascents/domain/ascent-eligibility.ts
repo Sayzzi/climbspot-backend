@@ -5,16 +5,19 @@ import {
   AscentTooLowError,
 } from './ascent-errors.ts';
 import {
-  DIP_ALLOWANCE,
-  DIP_ALLOWANCE_RATIO,
   MAXIMUM_LENGTH,
   MINIMUM_AVERAGE_GRADIENT,
   MINIMUM_ELEVATION_GAIN,
 } from './ascent-rules.ts';
-import type { AscentMeasurements } from './ascent.ts';
-import type { ElevationProfile } from './elevation-profile.ts';
-import { lengthOf } from './geodesy.ts';
-import type { Position } from './position.ts';
+
+import type { ElevationProfile } from '../../../shared/domain/survey/elevation-profile.ts';
+import { lengthOf } from '../../../shared/domain/survey/geodesy.ts';
+import {
+  dipAllowance,
+  heightLost,
+  type Measurements,
+} from '../../../shared/domain/survey/measurements.ts';
+import type { Position } from '../../../shared/domain/position.ts';
 
 const percent = (ratio: number) => `${String(Math.round(ratio * 1000) / 10)} %`;
 const metres = (value: number) => `${String(Math.round(value * 10) / 10)} m`;
@@ -30,7 +33,7 @@ export function ensureNotTooLong(path: readonly Position[]): void {
 }
 
 /** Refuses a measured profile that does not qualify as an Ascent (ADR 0006). */
-export function ensureEligible(profile: ElevationProfile, measurements: AscentMeasurements): void {
+export function ensureEligible(profile: ElevationProfile, measurements: Measurements): void {
   const { elevationGain, averageGradient } = measurements;
 
   if (elevationGain < MINIMUM_ELEVATION_GAIN) {
@@ -45,22 +48,11 @@ export function ensureEligible(profile: ElevationProfile, measurements: AscentMe
     );
   }
 
-  const lost = heightLostInDips(profile);
-  const allowance = Math.max(DIP_ALLOWANCE, DIP_ALLOWANCE_RATIO * elevationGain);
+  const lost = heightLost(profile);
+  const allowance = dipAllowance(elevationGain);
   if (lost > allowance) {
     throw new AscentDipTooLargeError(
       `The path loses ${metres(lost)} in Dips; at most ${metres(allowance)} is allowed. Split it into two Ascents.`,
     );
   }
-}
-
-function heightLostInDips(profile: ElevationProfile): number {
-  let lost = 0;
-  for (const [index, point] of profile.entries()) {
-    const previous = profile[index - 1];
-    if (previous !== undefined && point.elevation < previous.elevation) {
-      lost += previous.elevation - point.elevation;
-    }
-  }
-  return lost;
 }

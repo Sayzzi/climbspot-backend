@@ -1,5 +1,5 @@
 import { DomainError } from '../../../shared/domain/domain-error.ts';
-import type { Position } from './position.ts';
+import type { Position } from '../../../shared/domain/position.ts';
 
 /** Source of terrain elevations (ADR 0005). */
 export interface ElevationProvider {

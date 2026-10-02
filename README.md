@@ -60,7 +60,7 @@ src/
 │       └── index.ts         # wires the module and exposes it as an HttpModule
 ├── shared/
 │   ├── config/              # environment validation
-│   ├── domain/              # DomainError and other shared kernel types
+│   ├── domain/              # DomainError, Position, and survey/: how any path is sampled and measured
 │   ├── http/                # error handling, OpenAPI document, HttpModule contract
 │   └── infrastructure/      # logger, database connection
 ├── app.ts                   # createApp(deps): pure HTTP application, used by tests

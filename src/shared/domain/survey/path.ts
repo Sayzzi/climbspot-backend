@@ -1,5 +1,5 @@
 import { distanceBetween, interpolate } from './geodesy.ts';
-import type { Position } from './position.ts';
+import type { Position } from '../position.ts';
 
 /** A position on a path, with its distance from the path's first position. */
 export interface Sample {

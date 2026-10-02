@@ -4,8 +4,8 @@ import type {
   NearbyAscent,
   NearbyCriteria,
 } from '../domain/ascent-repository.ts';
-import type { Category } from '../domain/category.ts';
-import type { Position } from '../domain/position.ts';
+import type { Category } from '../../../shared/domain/survey/category.ts';
+import type { Position } from '../../../shared/domain/position.ts';
 
 export const NEARBY_DEFAULT_RADIUS = 10_000;
 export const NEARBY_MAXIMUM_RADIUS = 50_000;

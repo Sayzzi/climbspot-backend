@@ -1,14 +1,13 @@
 import { ensureEligible } from './ascent-eligibility.ts';
-import { MAXIMUM_GRADIENT_STRETCH } from './ascent-rules.ts';
-import { categoryFor, type Category } from './category.ts';
 import {
   firstPoint,
   lastPoint,
   reverse,
   type ElevationProfile,
   type ProfilePoint,
-} from './elevation-profile.ts';
-import type { Position } from './position.ts';
+} from '../../../shared/domain/survey/elevation-profile.ts';
+import type { Position } from '../../../shared/domain/position.ts';
+import { measure, type Measurements } from '../../../shared/domain/survey/measurements.ts';
 import type { Surface } from './surface.ts';
 
 /** A one-way uphill path from a Start to a Top (see CONTEXT.md). */
@@ -20,7 +19,7 @@ export interface Ascent {
   readonly path: readonly Position[];
   /** Samples every SAMPLING_SPACING metres, from Start to Top: what is measured. */
   readonly profile: ElevationProfile;
-  readonly measurements: AscentMeasurements;
+  readonly measurements: Measurements;
   readonly createdAt: Date;
 }
 
@@ -31,7 +30,7 @@ export interface AscentSummary {
   readonly surface: Surface;
   readonly start: AscentPoint;
   readonly top: AscentPoint;
-  readonly measurements: AscentMeasurements;
+  readonly measurements: Measurements;
   readonly createdAt: Date;
 }
 
@@ -40,20 +39,6 @@ export interface AscentPoint {
   readonly position: Position;
   /** Metres. */
   readonly elevation: number;
-}
-
-export interface AscentMeasurements {
-  /** Metres along the path. */
-  readonly length: number;
-  /** Top minus Start, in metres. */
-  readonly elevationGain: number;
-  /** Ratio: 0.08 means 8 %. */
-  readonly averageGradient: number;
-  /** Ratio, over the steepest stretch of at least MAXIMUM_GRADIENT_STRETCH metres. */
-  readonly maximumGradient: number;
-  /** Length in metres × average Gradient in percent, rounded to an integer (ADR 0006). */
-  readonly difficultyScore: number;
-  readonly category: Category;
 }
 
 export interface NewAscent {
@@ -96,44 +81,4 @@ export function summarize(ascent: Ascent): AscentSummary {
 
 function isUphill(profile: ElevationProfile): boolean {
   return lastPoint(profile).elevation >= firstPoint(profile).elevation;
-}
-
-function measure(profile: ElevationProfile): AscentMeasurements {
-  const start = firstPoint(profile);
-  const top = lastPoint(profile);
-  const length = top.distance;
-  const elevationGain = top.elevation - start.elevation;
-  const averageGradient = length > 0 ? elevationGain / length : 0;
-  // Rounded before deriving the Category, so the two always agree.
-  const difficultyScore = Math.round(length * averageGradient * 100);
-
-  return {
-    length,
-    elevationGain,
-    averageGradient,
-    maximumGradient: Math.max(averageGradient, steepestStretch(profile)),
-    difficultyScore,
-    category: categoryFor(difficultyScore),
-  };
-}
-
-/** Steepest Gradient over any stretch of at least MAXIMUM_GRADIENT_STRETCH metres. */
-function steepestStretch(profile: ElevationProfile): number {
-  let steepest = Number.NEGATIVE_INFINITY;
-  let end = 0;
-
-  for (const [index, from] of profile.entries()) {
-    end = Math.max(end, index + 1);
-    let to = profile[end];
-    while (to !== undefined && to.distance - from.distance < MAXIMUM_GRADIENT_STRETCH) {
-      end += 1;
-      to = profile[end];
-    }
-    if (to === undefined) {
-      break;
-    }
-    steepest = Math.max(steepest, (to.elevation - from.elevation) / (to.distance - from.distance));
-  }
-
-  return steepest;
 }

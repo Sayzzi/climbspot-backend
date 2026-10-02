@@ -1,6 +1,6 @@
 import type { Ascent, AscentSummary } from './ascent.ts';
-import type { Category } from './category.ts';
-import type { Position } from './position.ts';
+import type { Category } from '../../../shared/domain/survey/category.ts';
+import type { Position } from '../../../shared/domain/position.ts';
 import type { Surface } from './surface.ts';
 
 export interface NearbyCriteria {

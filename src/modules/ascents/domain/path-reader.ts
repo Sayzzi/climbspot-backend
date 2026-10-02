@@ -1,4 +1,4 @@
-import type { Position } from './position.ts';
+import type { Position } from '../../../shared/domain/position.ts';
 
 /**
  * Reads the 2D path of an uploaded file, dropping any elevation it carries (ADR 0005).

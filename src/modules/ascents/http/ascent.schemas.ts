@@ -7,8 +7,8 @@ import {
   NEARBY_MAXIMUM_RADIUS,
 } from '../application/find-ascents-nearby.ts';
 import { activities } from '../domain/activity.ts';
-import { MAXIMUM_GRADIENT_STRETCH } from '../domain/ascent-rules.ts';
-import { categories } from '../domain/category.ts';
+import { MAXIMUM_GRADIENT_STRETCH } from '../../../shared/domain/survey/survey-rules.ts';
+import { categories } from '../../../shared/domain/survey/category.ts';
 import { surfaces } from '../domain/surface.ts';
 
 const metres = (description: string) =>

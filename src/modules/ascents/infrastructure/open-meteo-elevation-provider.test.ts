@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ElevationUnavailableError } from '../domain/elevation-provider.ts';
-import type { Position } from '../domain/position.ts';
+import type { Position } from '../../../shared/domain/position.ts';
 import { OpenMeteoElevationProvider } from './open-meteo-elevation-provider.ts';
 
 const baseUrl = 'https://elevation.test/v1/elevation';

@@ -1,5 +1,5 @@
 import type { Sample } from './path.ts';
-import type { Position } from './position.ts';
+import type { Position } from '../position.ts';
 
 /** One point of an Elevation Profile. */
 export interface ProfilePoint {

@@ -4,7 +4,7 @@ import { SyntaxValidator } from 'fast-xml-validator';
 import { GpxEmptyError, GpxInvalidError, GpxTooLargeError } from '../../domain/ascent-errors.ts';
 import { MAXIMUM_PATH_POINTS } from '../../domain/ascent-rules.ts';
 import type { PathReader } from '../../domain/path-reader.ts';
-import type { Position } from '../../domain/position.ts';
+import type { Position } from '../../../../shared/domain/position.ts';
 
 interface GpxPoint {
   readonly lat?: string;

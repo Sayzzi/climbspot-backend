@@ -7,8 +7,8 @@ import type {
   NearbyCriteria,
 } from '../../domain/ascent-repository.ts';
 import { startOf, topOf, type Ascent, type AscentPoint } from '../../domain/ascent.ts';
-import { buildProfile } from '../../domain/elevation-profile.ts';
-import type { Position } from '../../domain/position.ts';
+import { buildProfile } from '../../../../shared/domain/survey/elevation-profile.ts';
+import type { Position } from '../../../../shared/domain/position.ts';
 import { ascents } from './ascents.schema.ts';
 
 const toWkt = ({ longitude, latitude }: Position) => `${String(longitude)} ${String(latitude)}`;

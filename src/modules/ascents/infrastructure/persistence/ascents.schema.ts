@@ -9,7 +9,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { categories } from '../../domain/category.ts';
+import { categories } from '../../../../shared/domain/survey/category.ts';
 import { surfaces } from '../../domain/surface.ts';
 
 /**
