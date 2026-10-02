@@ -36,3 +36,12 @@ export const HILLY_ABOVE = 25;
 
 /** Two proposals whose ends are both closer than this, in metres, are the same. */
 export const SAME_ITINERARY_DISTANCE = 200;
+
+/** How long a planning answer is reused for an identical request, in milliseconds. */
+export const PLANNING_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+/** Planning answers kept at most; the oldest are forgotten first. */
+export const PLANNING_CACHE_SIZE = 500;
+
+/** Requests whose points round to the same 1e-4 degree (~10 m) are the same request. */
+export const PLANNING_POINT_DECIMALS = 4;

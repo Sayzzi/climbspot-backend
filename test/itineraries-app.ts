@@ -7,11 +7,14 @@ import type { RoutingProvider } from '../src/modules/itineraries/domain/routing-
 import { createItinerariesModule } from '../src/modules/itineraries/index.ts';
 
 /** The HTTP application with the Itineraries module over a given routing provider. */
-export function itinerariesApp(routingProvider: RoutingProvider): Express {
+export function itinerariesApp(
+  routingProvider: RoutingProvider,
+  { now }: { now?: () => number } = {},
+): Express {
   return createApp({
     logger: pino({ level: 'silent' }),
     corsOrigins: [],
-    modules: [createItinerariesModule({ routingProvider })],
+    modules: [createItinerariesModule({ routingProvider, ...(now && { now }) })],
   });
 }
 

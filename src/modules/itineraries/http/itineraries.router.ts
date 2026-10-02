@@ -1,13 +1,18 @@
 import { Router } from 'express';
 
-import type { FindUphillItineraries } from '../application/find-uphill-itineraries.ts';
-import type { GenerateLoops } from '../application/generate-loops.ts';
+import type { Planner } from '../application/cached-planner.ts';
+import type {
+  LoopItinerary,
+  LoopRequest,
+  UphillItinerary,
+  UphillRequest,
+} from '../domain/itinerary.ts';
 import { toLoopItineraryResponse, toUphillItineraryResponse } from './itinerary.mapper.ts';
 import { loopRequestSchema, uphillRequestSchema } from './itinerary.schemas.ts';
 
 export interface ItinerariesRouterDependencies {
-  readonly findUphillItineraries: FindUphillItineraries;
-  readonly generateLoops: GenerateLoops;
+  readonly findUphillItineraries: Planner<UphillRequest, UphillItinerary[]>;
+  readonly generateLoops: Planner<LoopRequest, LoopItinerary[]>;
 }
 
 export function createItinerariesRouter({
