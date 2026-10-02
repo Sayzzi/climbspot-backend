@@ -1,6 +1,10 @@
 import { createApp } from './app.ts';
 import { createAscentsModule, OpenMeteoElevationProvider } from './modules/ascents/index.ts';
 import { createHealthModule } from './modules/health/index.ts';
+import {
+  createItinerariesModule,
+  OpenRouteServiceRoutingProvider,
+} from './modules/itineraries/index.ts';
 import { loadEnv } from './shared/config/env.ts';
 import { createDatabase } from './shared/infrastructure/database.ts';
 import { createLogger } from './shared/infrastructure/logger.ts';
@@ -19,6 +23,9 @@ const app = createApp({
       db: database.db,
       elevationProvider: new OpenMeteoElevationProvider({ baseUrl: env.ELEVATION_API_URL }),
       creationEnabled: env.ASCENT_CREATION_ENABLED,
+    }),
+    createItinerariesModule({
+      routingProvider: new OpenRouteServiceRoutingProvider({ apiKey: env.ORS_API_KEY }),
     }),
   ],
 });
