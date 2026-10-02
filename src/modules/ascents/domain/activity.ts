@@ -1,15 +1,5 @@
+import type { Activity } from '../../../shared/domain/activity.ts';
 import { surfaces, type Surface } from './surface.ts';
-
-/** Ways of travelling an Ascent. */
-export const activities = [
-  'running',
-  'trail_running',
-  'road_cycling',
-  'gravel_cycling',
-  'mountain_biking',
-] as const;
-
-export type Activity = (typeof activities)[number];
 
 /** The single source of truth linking Surfaces to Activities (ADR 0007). */
 const activitiesBySurface: Record<Surface, readonly Activity[]> = {

@@ -1,4 +1,5 @@
-import { surfacesAllowing, type Activity } from '../domain/activity.ts';
+import type { Activity } from '../../../shared/domain/activity.ts';
+import { surfacesAllowing } from '../domain/activity.ts';
 import type {
   AscentRepository,
   NearbyAscent,

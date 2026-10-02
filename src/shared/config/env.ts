@@ -18,6 +18,8 @@ const envSchema = z
       ),
     DATABASE_URL: z.url(),
     ELEVATION_API_URL: z.url().default('https://api.open-meteo.com/v1/elevation'),
+    /** OpenRouteService API key, used to plan Itineraries (ADR 0008). */
+    ORS_API_KEY: z.string().min(1),
     /** Temporary guard until Contributors are authenticated; off in production by default. */
     ASCENT_CREATION_ENABLED: z.stringbool().optional(),
   })
