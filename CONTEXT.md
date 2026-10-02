@@ -65,12 +65,16 @@ A path ClimbSpot works out on demand over the road and trail network for a Visit
 _Avoid_: Route, Course, Track, Parcours
 
 **Loop**:
-An Itinerary that starts and ends at the same place, at least as long as the distance the Visitor asked for.
+An Itinerary that starts and ends at a point the Visitor places on the map, never shorter than the distance they asked for, with the Relief they chose.
 _Avoid_: Round trip, Circuit, Boucle
 
 **Uphill Itinerary**:
-An Itinerary that goes up from one point to another, as close as possible to the average Gradient and length the Visitor asked for. It is not an Ascent unless it is catalogued as one.
+An Itinerary that goes up from one point to another, as close as possible to the average Gradient the Visitor asked for and never shorter than the length they asked for. It is not an Ascent unless it is catalogued as one.
 _Avoid_: Climb, Suggested Ascent, Montée
+
+**Relief**:
+How much a Loop goes up and down overall: flat, rolling or hilly.
+_Avoid_: Terrain, Profile, Difficulty
 
 ### People
 
