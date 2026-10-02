@@ -55,13 +55,27 @@ The dominant ground type of an Ascent: paved, gravel or trail.
 _Avoid_: Terrain, Ground, Road type
 
 **Activity**:
-A way of travelling an Ascent: Running, Trail Running, Road Cycling, Gravel Cycling or Mountain Biking. Always derived from the Surface, never chosen directly.
+A way of travelling: Running, Trail Running, Road Cycling, Gravel Cycling or Mountain Biking. An Ascent's Activities are derived from its Surface, never chosen for it; a Visitor picks the Activity they want when searching or asking for an Itinerary.
 _Avoid_: Sport, Discipline, Mode
+
+### Itineraries
+
+**Itinerary**:
+A path ClimbSpot works out on demand over the road and trail network for a Visitor's request, following ways suited to the chosen Activity. It is not catalogued.
+_Avoid_: Route, Course, Track, Parcours
+
+**Loop**:
+An Itinerary that starts and ends at the same place, at least as long as the distance the Visitor asked for.
+_Avoid_: Round trip, Circuit, Boucle
+
+**Uphill Itinerary**:
+An Itinerary that goes up from one point to another, as close as possible to the average Gradient and length the Visitor asked for. It is not an Ascent unless it is catalogued as one.
+_Avoid_: Climb, Suggested Ascent, Montée
 
 ### People
 
 **Visitor**:
-Anyone searching for Ascents, signed in or not.
+Anyone searching for Ascents or asking for Itineraries, signed in or not.
 _Avoid_: User, Guest
 
 **Contributor**:
