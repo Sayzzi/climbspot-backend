@@ -84,7 +84,23 @@ function profileOf(coords: Point[]) {
     const w = pts.slice(Math.max(0, i - 1), Math.min(pts.length, i + 2));
     return { ...p, e: w.reduce((s, q) => s + q.e, 0) / w.length };
   });
-  return { pts: sm, total };
+  return { pts: sm, total, cum };
+}
+
+/** The original road geometry between two distances along it (not the 100 m analysis points). */
+function cut(coords: Point[], cum: number[], from: number, to: number): [number, number][] {
+  const at = (d: number): [number, number] => {
+    let i = 0;
+    while (i < cum.length - 2 && cum[i + 1]! < d) i++;
+    const t = (d - cum[i]!) / Math.max(cum[i + 1]! - cum[i]!, 1e-9);
+    const a = coords[i]!,
+      b = coords[i + 1]!;
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  };
+  const inner = coords
+    .filter((_, i) => cum[i]! > from && cum[i]! < to)
+    .map((p) => [p[0], p[1]] as [number, number]);
+  return [at(from), ...inner, at(to)];
 }
 
 const gainPerKm = (pts: { e: number }[], total: number) => {
@@ -101,6 +117,9 @@ interface UphillResult {
   exact: boolean;
   line: [number, number][];
   seed: number;
+  from: number;
+  to: number;
+  reversed: boolean;
 }
 
 function bestUphill(
@@ -112,7 +131,11 @@ function bestUphill(
   seed: number,
 ): UphillResult | undefined {
   let best: (UphillResult & { score: number }) | undefined;
-  for (const seq of [pts, [...pts].reverse().map((p, i, arr) => ({ ...p, d: arr[0]!.d - p.d }))]) {
+  const total = pts.at(-1)!.d;
+  for (const [reversed, seq] of [
+    [false, pts],
+    [true, [...pts].reverse().map((p, i, arr) => ({ ...p, d: arr[0]!.d - p.d }))],
+  ] as const) {
     for (let i = 0; i < seq.length; i++) {
       for (
         let k = i + Math.ceil(L / 100);
@@ -139,7 +162,11 @@ function bestUphill(
             fromRequest,
             exact: off === 0,
             seed,
-            line: seq.slice(i, k + 1).map((p) => [p.lon, p.lat]),
+            reversed,
+            line: [],
+            // Distances along the original direction of the trip.
+            from: reversed ? total - seq[k]!.d : seq[i]!.d,
+            to: reversed ? total - seq[i]!.d : seq[k]!.d,
           };
         }
       }
@@ -245,9 +272,12 @@ for (const c of cases) {
     const found: UphillResult[] = [];
     for (let seed = 1; seed <= c.tries; seed++) {
       const trip = await roundTrip(c.profile, c.lon, c.lat, c.length * 2.5, seed);
-      const { pts } = profileOf(trip.coords);
+      const { pts, cum } = profileOf(trip.coords);
       const r = bestUphill(pts, c.length, c.gmin!, c.gmax!, origin, seed);
-      if (r) found.push(r);
+      if (r) {
+        const line = cut(trip.coords, cum, r.from, r.to);
+        found.push({ ...r, line: r.reversed ? line.reverse() : line });
+      }
     }
     found.sort(
       (a, b) =>
