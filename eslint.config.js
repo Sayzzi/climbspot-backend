@@ -48,7 +48,7 @@ const shared = (...types) => ({ to: { element: { types } } });
 const fromLayer = (type) => ({ element: { type } });
 
 export default defineConfig(
-  globalIgnores(['dist', 'coverage', 'drizzle']),
+  globalIgnores(['dist', 'coverage', 'drizzle', 'prototypes']),
 
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,
