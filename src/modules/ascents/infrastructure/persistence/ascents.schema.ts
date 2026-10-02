@@ -32,9 +32,13 @@ export const ascents = pgTable(
     id: uuid().primaryKey(),
     name: text().notNull(),
     surface: ascentSurface().notNull(),
-    /** Resampled path, from Start to Top. */
+    /** Shape shown on maps, from Start to Top, simplified from the uploaded path. */
     path: geography('LineString')('path').notNull(),
-    /** Smoothed elevations in metres, one per point of `path`. */
+    /** Samples every SAMPLING_SPACING metres, from Start to Top: what was measured. */
+    sampledPath: geography('LineString')('sampled_path').notNull(),
+    /** Distance of each sample along the path, in metres. */
+    sampleDistances: doublePrecision('sample_distances').array().notNull(),
+    /** Smoothed elevations in metres, one per sample. */
     elevations: doublePrecision().array().notNull(),
     start: geography('Point')('start').notNull(),
     top: geography('Point')('top').notNull(),

@@ -46,7 +46,7 @@ export function toAscentResponse(ascent: Ascent): AscentResponse {
     ...toAscentSummaryResponse(summarize(ascent)),
     path: {
       type: 'LineString',
-      coordinates: ascent.profile.map(({ position }) => [
+      coordinates: ascent.path.map((position) => [
         coordinate(position.longitude),
         coordinate(position.latitude),
       ]),

@@ -1,11 +1,15 @@
 import { ensureNotTooLong } from '../domain/ascent-eligibility.ts';
 import { AscentCreationDisabledError } from '../domain/ascent-errors.ts';
-import { SAMPLING_SPACING, SMOOTHING_WINDOW } from '../domain/ascent-rules.ts';
+import {
+  PATH_SIMPLIFICATION_TOLERANCE,
+  SAMPLING_SPACING,
+  SMOOTHING_WINDOW,
+} from '../domain/ascent-rules.ts';
 import type { AscentRepository } from '../domain/ascent-repository.ts';
 import { createAscent, type Ascent } from '../domain/ascent.ts';
 import type { ElevationProvider } from '../domain/elevation-provider.ts';
 import { buildProfile, smooth } from '../domain/elevation-profile.ts';
-import { resample } from '../domain/path.ts';
+import { resample, simplify } from '../domain/path.ts';
 import type { Position } from '../domain/position.ts';
 import type { Surface } from '../domain/surface.ts';
 
@@ -42,14 +46,18 @@ export class CreateAscent {
     this.ensureEnabled();
     ensureNotTooLong(path);
 
-    const positions = resample(path, SAMPLING_SPACING);
-    const elevations = smooth(await elevationProvider.elevationsAt(positions), SMOOTHING_WINDOW);
+    const samples = resample(path, SAMPLING_SPACING);
+    const elevations = smooth(
+      await elevationProvider.elevationsAt(samples.map((sample) => sample.position)),
+      SMOOTHING_WINDOW,
+    );
 
     const ascent = createAscent({
       id: newId(),
       name,
       surface,
-      profile: buildProfile(positions, elevations),
+      path: simplify(path, PATH_SIMPLIFICATION_TOLERANCE),
+      profile: buildProfile(samples, elevations),
       createdAt: now(),
     });
 

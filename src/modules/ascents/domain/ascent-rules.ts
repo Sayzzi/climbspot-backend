@@ -10,6 +10,12 @@
  */
 export const SAMPLING_SPACING = 100;
 
+/**
+ * How far, in metres, the path shown on maps may stray from the uploaded one once
+ * simplified: points closer than this to the line are dropped.
+ */
+export const PATH_SIMPLIFICATION_TOLERANCE = 5;
+
 /** Number of samples averaged when smoothing an Elevation Profile (odd): ~200 m. */
 export const SMOOTHING_WINDOW = 3;
 

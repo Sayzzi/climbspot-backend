@@ -60,6 +60,7 @@ describe('POST /ascents measurements', () => {
     expect(response.body.start).toEqual({ latitude: 45, longitude: 6, elevation: 200 });
     expect(response.body.top.elevation).toBeCloseTo(280, 1);
     expect(response.body.elevationGain).toBeCloseTo(80, 1);
+    expect(response.body.path.coordinates[0]).toEqual([6, 45]);
   });
 
   it('ignores the elevations recorded in the file', async () => {
@@ -124,6 +125,56 @@ describe('POST /ascents Surfaces and Activities', () => {
 
     expect(response.body.surface).toBe(surface);
     expect(response.body.activities).toEqual(activities);
+  });
+});
+
+describe('POST /ascents path shape', () => {
+  /** 450 m north, then 500 m east: a corner between two 100 m samples. */
+  function cornerPath() {
+    const [corner] = northOf(REFERENCE, 450);
+    if (corner === undefined) {
+      throw new Error('unreachable');
+    }
+    const metresPerDegreeOfLongitude = 111_195.08 * Math.cos((corner.latitude * Math.PI) / 180);
+    const east = (metres: number) => ({
+      latitude: corner.latitude,
+      longitude: corner.longitude + metres / metresPerDegreeOfLongitude,
+    });
+    return { corner, points: [REFERENCE, corner, east(250), east(500)] };
+  }
+
+  it('keeps the shape of the uploaded path for the map, corners included', async () => {
+    const { corner, points } = cornerPath();
+
+    const response = await upload(buildApp(), gpxTrack(points));
+
+    expect(response.status).toBe(201);
+    const [, second] = response.body.path.coordinates as [number, number][];
+    expect(second?.[0]).toBeCloseTo(corner.longitude, 6);
+    expect(second?.[1]).toBeCloseTo(corner.latitude, 6);
+  });
+
+  it('still measures on samples every 100 m', async () => {
+    const response = await upload(buildApp(), gpxTrack(cornerPath().points));
+
+    expect(response.body.elevationProfile).toHaveLength(11);
+    expect(response.body.length).toBeCloseTo(950, 0);
+  });
+
+  it('drops points that do not change the shape', async () => {
+    const response = await upload(buildApp(), gpxTrack(straightNorth(REFERENCE, 1000, 400)));
+
+    expect(response.body.path.coordinates).toHaveLength(2);
+  });
+
+  it('returns the same path when the Ascent is read back', async () => {
+    const app = buildApp();
+    const created = await upload(app, gpxTrack(cornerPath().points));
+
+    const read = await request(app).get(`/ascents/${created.body.id as string}`);
+
+    expect(read.body.path).toEqual(created.body.path);
+    expect(read.body.elevationProfile).toEqual(created.body.elevationProfile);
   });
 });
 

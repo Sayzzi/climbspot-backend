@@ -46,13 +46,15 @@ const ascentColumns = {
   name: ascents.name,
   surface: ascents.surface,
   path: sql<string>`extensions.st_asgeojson(${ascents.path}, 15)`.as('path'),
+  sampledPath: sql<string>`extensions.st_asgeojson(${ascents.sampledPath}, 15)`.as('sampled_path'),
+  sampleDistances: ascents.sampleDistances,
   elevations: ascents.elevations,
   ...measurementColumns,
   createdAt: ascents.createdAt,
 };
 
 type AscentRow = {
-  [K in keyof typeof ascentColumns]: K extends 'path'
+  [K in keyof typeof ascentColumns]: K extends 'path' | 'sampledPath'
     ? string
     : (typeof ascents.$inferSelect)[K & keyof typeof ascents.$inferSelect];
 };
@@ -61,13 +63,16 @@ export class DrizzleAscentRepository implements AscentRepository {
   constructor(private readonly db: Database) {}
 
   async save(ascent: Ascent): Promise<void> {
-    const positions = ascent.profile.map((point) => point.position);
+    const lineString = (positions: readonly Position[]) =>
+      geographyFromWkt(`LINESTRING(${positions.map(toWkt).join(', ')})`);
 
     await this.db.insert(ascents).values({
       id: ascent.id,
       name: ascent.name,
       surface: ascent.surface,
-      path: geographyFromWkt(`LINESTRING(${positions.map(toWkt).join(', ')})`),
+      path: lineString(ascent.path),
+      sampledPath: lineString(ascent.profile.map((point) => point.position)),
+      sampleDistances: ascent.profile.map((point) => point.distance),
       elevations: ascent.profile.map((point) => point.elevation),
       start: geographyFromWkt(`POINT(${toWkt(startOf(ascent).position)})`),
       top: geographyFromWkt(`POINT(${toWkt(topOf(ascent).position)})`),
@@ -144,19 +149,29 @@ function toAscent({
   name,
   surface,
   path,
+  sampledPath,
+  sampleDistances,
   elevations,
   createdAt,
   ...measurements
 }: AscentRow): Ascent {
-  const { coordinates } = JSON.parse(path) as { coordinates: [number, number][] };
-  const positions = coordinates.map(([longitude, latitude]) => ({ latitude, longitude }));
+  const samples = positionsOf(sampledPath).map((position, index) => ({
+    position,
+    distance: sampleDistances[index] ?? Number.NaN,
+  }));
 
   return {
     id,
     name,
     surface,
-    profile: buildProfile(positions, elevations),
+    path: positionsOf(path),
+    profile: buildProfile(samples, elevations),
     measurements,
     createdAt,
   };
+}
+
+function positionsOf(lineString: string): Position[] {
+  const { coordinates } = JSON.parse(lineString) as { coordinates: [number, number][] };
+  return coordinates.map(([longitude, latitude]) => ({ latitude, longitude }));
 }

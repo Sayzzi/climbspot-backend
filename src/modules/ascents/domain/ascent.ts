@@ -16,7 +16,9 @@ export interface Ascent {
   readonly id: string;
   readonly name: string;
   readonly surface: Surface;
-  /** From Start to Top. */
+  /** Shape of the Ascent for maps, from Start to Top, simplified from the uploaded path. */
+  readonly path: readonly Position[];
+  /** Samples every SAMPLING_SPACING metres, from Start to Top: what is measured. */
   readonly profile: ElevationProfile;
   readonly measurements: AscentMeasurements;
   readonly createdAt: Date;
@@ -58,7 +60,8 @@ export interface NewAscent {
   readonly id: string;
   readonly name: string;
   readonly surface: Surface;
-  /** In the direction it was provided; it is turned uphill if needed. */
+  /** Path and profile in the direction they were provided; both are turned uphill if needed. */
+  readonly path: readonly Position[];
   readonly profile: ElevationProfile;
   readonly createdAt: Date;
 }
@@ -68,11 +71,12 @@ export interface NewAscent {
  *
  * @throws when the path does not qualify as an Ascent (see `ensureEligible`).
  */
-export function createAscent({ profile, ...identity }: NewAscent): Ascent {
-  const uphill = isUphill(profile) ? profile : reverse(profile);
+export function createAscent({ path, profile, ...identity }: NewAscent): Ascent {
+  const goesUp = isUphill(profile);
+  const uphill = goesUp ? profile : reverse(profile);
   const measurements = measure(uphill);
   ensureEligible(uphill, measurements);
-  return { ...identity, profile: uphill, measurements };
+  return { ...identity, path: goesUp ? path : path.toReversed(), profile: uphill, measurements };
 }
 
 export function startOf(ascent: Ascent): ProfilePoint {
@@ -84,7 +88,7 @@ export function topOf(ascent: Ascent): ProfilePoint {
 }
 
 export function summarize(ascent: Ascent): AscentSummary {
-  const { profile: _profile, ...identity } = ascent;
+  const { path: _path, profile: _profile, ...identity } = ascent;
   const toPoint = ({ position, elevation }: ProfilePoint): AscentPoint => ({ position, elevation });
 
   return { ...identity, start: toPoint(startOf(ascent)), top: toPoint(topOf(ascent)) };

@@ -1,4 +1,4 @@
-import { distanceBetween } from './geodesy.ts';
+import type { Sample } from './path.ts';
 import type { Position } from './position.ts';
 
 /** One point of an Elevation Profile. */
@@ -12,23 +12,16 @@ export interface ProfilePoint {
 
 export type ElevationProfile = readonly ProfilePoint[];
 
-/** Pairs each position with its elevation and its distance along the path. */
+/** Pairs each sample (position and distance along the path) with its elevation. */
 export function buildProfile(
-  positions: readonly Position[],
+  samples: readonly Sample[],
   elevations: readonly number[],
 ): ElevationProfile {
-  let distance = 0;
-  let previous: Position | undefined;
-
-  return positions.map((position, index) => {
+  return samples.map(({ position, distance }, index) => {
     const elevation = elevations[index];
     if (elevation === undefined) {
-      throw new RangeError(`Missing elevation for position ${String(index)}.`);
+      throw new RangeError(`Missing elevation for sample ${String(index)}.`);
     }
-    if (previous !== undefined) {
-      distance += distanceBetween(previous, position);
-    }
-    previous = position;
     return { position, distance, elevation };
   });
 }
