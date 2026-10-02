@@ -1,11 +1,11 @@
-import { round, roundCoordinate } from '../../../shared/http/rounding.ts';
 import {
   firstPoint,
   lastPoint,
   type ProfilePoint,
 } from '../../../shared/domain/survey/elevation-profile.ts';
-import type { UphillItinerary } from '../domain/itinerary.ts';
-import type { UphillItineraryResponse } from './itinerary.schemas.ts';
+import { round, roundCoordinate } from '../../../shared/http/rounding.ts';
+import type { LoopItinerary, UphillItinerary } from '../domain/itinerary.ts';
+import type { LoopItineraryResponse, UphillItineraryResponse } from './itinerary.schemas.ts';
 
 const point = ({ position, elevation }: ProfilePoint) => ({
   latitude: roundCoordinate(position.latitude),
@@ -13,10 +13,9 @@ const point = ({ position, elevation }: ProfilePoint) => ({
   elevation: round(elevation, 1),
 });
 
-export function toUphillItineraryResponse(itinerary: UphillItinerary): UphillItineraryResponse {
-  const { measurements } = itinerary;
+/** Fields every kind of Itinerary shares. */
+function common(itinerary: UphillItinerary | LoopItinerary) {
   return {
-    kind: 'uphill',
     exact: itinerary.exact,
     differences: itinerary.differences.map((difference) =>
       difference.kind === 'gradient'
@@ -24,8 +23,8 @@ export function toUphillItineraryResponse(itinerary: UphillItinerary): UphillIti
         : difference,
     ),
     path: {
-      type: 'LineString',
-      coordinates: itinerary.path.map((position) => [
+      type: 'LineString' as const,
+      coordinates: itinerary.path.map((position): [number, number] => [
         roundCoordinate(position.longitude),
         roundCoordinate(position.latitude),
       ]),
@@ -34,8 +33,20 @@ export function toUphillItineraryResponse(itinerary: UphillItinerary): UphillIti
       distance: round(distance, 1),
       elevation: round(elevation, 1),
     })),
-    length: round(measurements.length, 1),
+    length: round(itinerary.measurements.length, 1),
     heightGained: round(itinerary.heightGained, 1),
+  };
+}
+
+export function toLoopItineraryResponse(itinerary: LoopItinerary): LoopItineraryResponse {
+  return { kind: 'loop', ...common(itinerary), relief: itinerary.relief };
+}
+
+export function toUphillItineraryResponse(itinerary: UphillItinerary): UphillItineraryResponse {
+  const { measurements } = itinerary;
+  return {
+    kind: 'uphill',
+    ...common(itinerary),
     start: point(firstPoint(itinerary.profile)),
     top: point(lastPoint(itinerary.profile)),
     elevationGain: round(measurements.elevationGain, 1),

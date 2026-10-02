@@ -1,5 +1,6 @@
 import type { HttpModule } from '../../shared/http/http-module.ts';
 import { FindUphillItineraries } from './application/find-uphill-itineraries.ts';
+import { GenerateLoops } from './application/generate-loops.ts';
 import type { RoutingProvider } from './domain/routing-provider.ts';
 import { registerItinerariesOpenApi } from './http/itineraries.openapi.ts';
 import { createItinerariesRouter } from './http/itineraries.router.ts';
@@ -19,6 +20,7 @@ export function createItinerariesModule({
     basePath,
     router: createItinerariesRouter({
       findUphillItineraries: new FindUphillItineraries(routingProvider),
+      generateLoops: new GenerateLoops(routingProvider),
     }),
     registerOpenApi: (registry) => {
       registerItinerariesOpenApi(registry, basePath);

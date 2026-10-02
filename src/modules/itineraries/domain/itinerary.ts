@@ -36,6 +36,19 @@ export interface UphillItinerary extends ItineraryBase {
   readonly distanceToStart: number;
 }
 
+export interface LoopItinerary extends ItineraryBase {
+  readonly kind: 'loop';
+  readonly relief: Relief;
+}
+
+export interface LoopRequest {
+  readonly start: Position;
+  /** Metres; the Loop is never shorter and at most LENGTH_TOLERANCE longer. */
+  readonly distance: number;
+  readonly relief: Relief;
+  readonly activity: Activity;
+}
+
 export interface UphillRequest {
   readonly start: Position;
   /** Metres from `start` within which the Itinerary must start. */

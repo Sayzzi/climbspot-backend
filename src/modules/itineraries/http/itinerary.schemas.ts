@@ -55,6 +55,31 @@ const itineraryBase = {
   heightGained: metres('Sum of every rise along the path'),
 };
 
+export const loopItinerarySchema = z
+  .object({
+    kind: z.literal('loop'),
+    ...itineraryBase,
+    relief: z.enum(reliefs).meta({ id: 'Relief' }),
+  })
+  .meta({ id: 'LoopItinerary' });
+
+export const loopRequestSchema = z
+  .object({
+    start: positionSchema,
+    distance: z.number().min(1000).max(100_000).meta({
+      description: 'Metres; Loops are never shorter and at most 20 % longer.',
+    }),
+    relief: z.enum(reliefs).meta({ id: 'Relief' }),
+    activity: activitySchema,
+  })
+  .meta({ id: 'LoopRequest' });
+
+export const loopItinerariesSchema = z
+  .object({ itineraries: z.array(loopItinerarySchema) })
+  .meta({ id: 'LoopItineraries' });
+
+export type LoopItineraryResponse = z.infer<typeof loopItinerarySchema>;
+
 export const uphillItinerarySchema = z
   .object({
     kind: z.literal('uphill'),
