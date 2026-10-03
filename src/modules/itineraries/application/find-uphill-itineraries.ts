@@ -2,7 +2,7 @@ import { MAXIMUM_PROPOSALS, ROUTING_CALL_BUDGET } from '../domain/itinerary-rule
 import type { UphillItinerary, UphillRequest } from '../domain/itinerary.ts';
 import type { RoutingProvider } from '../domain/routing-provider.ts';
 import { survey } from '../domain/surveyed-path.ts';
-import { bestUphillStretch, isSameItinerary, rankUphill } from '../domain/uphill-search.ts';
+import { bestUphillStretch, keepBest, rankUphill } from '../domain/uphill-search.ts';
 import { uphillExplorations } from './uphill-explorations.ts';
 
 /**
@@ -20,7 +20,7 @@ export class FindUphillItineraries {
       const routed = await explore();
       const stretch = routed && bestUphillStretch(survey(routed), request);
       if (stretch !== undefined) {
-        keepBest(found, stretch, request);
+        keepBest(found, stretch, (a, b) => rankUphill([b, a], request)[0] === a);
       }
       if (found.filter((itinerary) => itinerary.exact).length >= MAXIMUM_PROPOSALS) {
         break;
@@ -28,18 +28,5 @@ export class FindUphillItineraries {
     }
 
     return rankUphill(found, request).slice(0, MAXIMUM_PROPOSALS);
-  }
-}
-
-/** Adds a proposal, or replaces the same stretch found earlier if this one ranks better. */
-function keepBest(found: UphillItinerary[], candidate: UphillItinerary, request: UphillRequest) {
-  const same = found.findIndex((itinerary) => isSameItinerary(itinerary, candidate));
-  if (same === -1) {
-    found.push(candidate);
-    return;
-  }
-  const existing = found[same];
-  if (existing !== undefined && rankUphill([existing, candidate], request)[0] === candidate) {
-    found[same] = candidate;
   }
 }

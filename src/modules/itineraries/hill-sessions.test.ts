@@ -2,7 +2,7 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
 import { askSessions, itinerariesApp } from '../../../test/itineraries-app.ts';
-import { fakeRouting } from '../../../test/routing.ts';
+import { fakeRouting, legs } from '../../../test/routing.ts';
 import { METRES_PER_DEGREE_OF_LATITUDE, REFERENCE } from '../../../test/terrain.ts';
 import type { Position } from '../../shared/domain/position.ts';
 import { distanceBetween } from '../../shared/domain/survey/geodesy.ts';
@@ -78,6 +78,49 @@ describe('POST /itineraries/sessions', () => {
     );
   });
 
+  it('cuts the Repeat to exactly the asked length between two samples', async () => {
+    const { provider } = fakeRouting({ elevationAt: hillNorth, roundTrip: () => undefined });
+
+    const [session] = sessions(
+      (await askSessions(itinerariesApp(provider), ask({ repeatLength: 350 }))).body,
+    );
+
+    expect(session?.repeat.length).toBeCloseTo(350, 0);
+    expect(session?.repeat.elevationProfile.at(-1)?.distance).toBeCloseTo(350, 0);
+    const [first, last] = [
+      session?.repeat.path.coordinates[0],
+      session?.repeat.path.coordinates.at(-1),
+    ];
+    expect(first && last && distanceBetween(toPosition(first), toPosition(last))).toBeCloseTo(
+      350,
+      -1,
+    );
+  });
+
+  it('takes the Repeat on the steadier hill, even a little further', async () => {
+    // Northwards: 300 m going from 3 % to 11 % (7 % on average) at 1 km, then a steady 7 % at 2 km.
+    const uneven = (north: number) =>
+      north <= 1150 ? 0.03 * (north - 1000) : 4.5 + 0.11 * (north - 1150);
+    const { provider } = fakeRouting({
+      elevationAt: (p) => {
+        const north = northOf(p);
+        if (north <= 1000) return 200;
+        if (north <= 1300) return 200 + uneven(north);
+        if (north <= 2000) return 221;
+        return 221 + 0.07 * (north - 2000);
+      },
+      roundTrip: () => undefined,
+      routeTowards: ({ start, destination }) =>
+        destination.latitude > start.latitude ? legs(start, [0, 4000]) : undefined,
+    });
+
+    const [session] = sessions((await askSessions(itinerariesApp(provider), ask())).body);
+
+    const foot = session?.repeat.path.coordinates[0];
+    expect(foot && northOf(toPosition(foot))).toBeGreaterThan(1900);
+    expect(session?.repeat.averageGradient).toBeCloseTo(0.07, 2);
+  });
+
   it('totals the whole session, computed by hand', async () => {
     // A Warm-up north, flat for 1 km then up to the foot of the Repeat, 4 × (300 m up at
     // 7 % and back down), and the same Warm-up back.
@@ -85,16 +128,16 @@ describe('POST /itineraries/sessions', () => {
 
     const [session] = sessions((await askSessions(itinerariesApp(provider), ask())).body);
     const warmUp = session?.warmUp.length ?? 0;
-    const climbedToFoot = warmUp - 1000;
+    const riseToFoot = warmUp - 1000;
 
     expect(session?.totals.length).toBeCloseTo(2 * warmUp + 4 * 600, -1);
-    expect(session?.totals.heightGained).toBeCloseTo(4 * 21 + 0.07 * climbedToFoot, -1);
+    expect(session?.totals.heightGained).toBeCloseTo(4 * 21 + 0.07 * riseToFoot, -1);
     expect(session?.totals.effort.kmEffort).toBeCloseTo(
-      (2 * warmUp + 2400) / 1000 + (84 + 0.07 * climbedToFoot) / 100,
+      (2 * warmUp + 2400) / 1000 + (84 + 0.07 * riseToFoot) / 100,
       1,
     );
     // Up at C(7 %)/C(0) = 1.438, down at the 0.9 floor (Minetti alone: 0.69).
-    const byHand = 2 * 1000 + climbedToFoot * (1.438 + 0.9) + 4 * (300 * 1.438 + 300 * 0.9);
+    const byHand = 2 * 1000 + riseToFoot * (1.438 + 0.9) + 4 * (300 * 1.438 + 300 * 0.9);
     expect(Math.abs((session?.totals.effort.flatEquivalentDistance ?? 0) - byHand)).toBeLessThan(
       40,
     );

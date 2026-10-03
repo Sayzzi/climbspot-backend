@@ -4,12 +4,14 @@ import { distanceBetween, interpolate } from '../../../shared/domain/survey/geod
 import { dipAllowance, measure } from '../../../shared/domain/survey/measurements.ts';
 import { LENGTH_TOLERANCE, SAME_ITINERARY_DISTANCE } from './itinerary-rules.ts';
 import type { UphillItinerary, UphillRequest } from './itinerary.ts';
-import { cumulativeDistances, geometryBetween, type SurveyedPath } from './surveyed-path.ts';
+import { geometryBetween, type SurveyedPath } from './surveyed-path.ts';
 
 interface Stretch {
-  /** Indices into the profile travelled in `direction`. */
+  /** Index into the profile travelled in `direction` where the stretch starts. */
   readonly first: number;
+  /** Index of the sample at or just after its end, and how far towards it the end lies. */
   readonly last: number;
+  readonly fraction: number;
   readonly reversed: boolean;
   readonly gradient: number;
   /** Height lost in Dips along the stretch, in metres. */
@@ -20,11 +22,51 @@ interface Stretch {
   readonly distanceToStart: number;
 }
 
-/** Lengths a stretch may have, in metres. */
+/** Lengths a stretch may have, in metres; equal bounds ask for exactly that length. */
 export interface StretchLengths {
   readonly shortest: number;
   readonly longest: number;
 }
+
+/** Where a stretch from a sample may end: its last sample and how far towards it. */
+interface StretchEnd {
+  readonly last: number;
+  readonly fraction: number;
+  readonly length: number;
+}
+
+function* stretchEnds(
+  profile: ElevationProfile,
+  first: number,
+  { shortest, longest }: StretchLengths,
+): Generator<StretchEnd> {
+  const from = profile[first]?.distance ?? 0;
+  for (let last = first + 1; last < profile.length; last += 1) {
+    const to = profile[last]?.distance ?? Infinity;
+    const length = to - from;
+    if (shortest === longest) {
+      // Exactly that length: the end falls between two samples.
+      if (length >= shortest) {
+        const previous = profile[last - 1]?.distance ?? from;
+        yield {
+          last,
+          fraction: (from + shortest - previous) / (to - previous || 1),
+          length: shortest,
+        };
+        return;
+      }
+      continue;
+    }
+    if (length > longest) return;
+    if (length >= shortest) yield { last, fraction: 1, length };
+  }
+}
+
+/** A cumulative value at a stretch end, between its last two samples. */
+const atEnd = (values: readonly number[], { last, fraction }: StretchEnd) => {
+  const before = values[last - 1] ?? 0;
+  return before + ((values[last] ?? before) - before) * fraction;
+};
 
 /** An Uphill Itinerary's lengths: never shorter than asked, at most 20 % longer. */
 export const uphillLengths = (length: number): StretchLengths => ({
@@ -46,6 +88,7 @@ export function bestUphillStretch(
 
   for (const reversed of [false, true]) {
     const profile = reversed ? reverse(path.profile) : path.profile;
+    const elevations = profile.map((point) => point.elevation);
     const lost = cumulativeLoss(profile);
     const strayed = cumulativeUnevenness(profile, request);
 
@@ -54,22 +97,18 @@ export function bestUphillStretch(
       if (distanceToStart > request.radius) {
         continue;
       }
-      for (let last = first + 1; last < profile.length; last += 1) {
-        const to = profile[last];
-        if (to === undefined) break;
-        const length = to.distance - from.distance;
-        if (length > lengths.longest) break;
-        if (length < lengths.shortest) continue;
-
-        const gain = to.elevation - from.elevation;
-        const loss = (lost[last] ?? 0) - (lost[first] ?? 0);
+      for (const end of stretchEnds(profile, first, lengths)) {
+        const { length } = end;
+        const gain = atEnd(elevations, end) - from.elevation;
+        const loss = atEnd(lost, end) - (lost[first] ?? 0);
         if (gain <= 0 || loss > dipAllowance(gain)) continue;
 
-        const unevenness = (strayed[last] ?? 0) - (strayed[first] ?? 0);
+        const unevenness = atEnd(strayed, end) - (strayed[first] ?? 0);
         const gradient = gain / length;
         const stretch = {
           first,
-          last,
+          last: end.last,
+          fraction: end.fraction,
           reversed,
           gradient,
           loss,
@@ -110,70 +149,6 @@ export function rankUphill(
 /** How far the maximum Gradient goes above the asked range, in whole percents. */
 export function wallAbove(itinerary: UphillItinerary, maxGradient: number): number {
   return Math.round(Math.max(0, itinerary.measurements.maximumGradient - maxGradient) * 100);
-}
-
-/**
- * The same Itinerary cut to exactly `length` metres from its start: path, profile and
- * measurements, and whether its average Gradient is still within the asked range.
- */
-export function trimmedTo(
-  itinerary: UphillItinerary,
-  length: number,
-  request: UphillRequest,
-): UphillItinerary {
-  const profile = cutProfile(itinerary.profile, length);
-  const path = cutPath(itinerary.path, length);
-  const measurements = measure(profile);
-  const exact = isExact(measurements.averageGradient, request);
-  return {
-    ...itinerary,
-    path,
-    profile,
-    measurements,
-    exact,
-    differences: exact
-      ? []
-      : [
-          {
-            kind: 'gradient',
-            min: request.minGradient,
-            max: request.maxGradient,
-            actual: measurements.averageGradient,
-          },
-        ],
-  };
-}
-
-function cutProfile(profile: ElevationProfile, length: number): ElevationProfile {
-  const kept = profile.filter((point) => point.distance < length);
-  const next = profile.find((point) => point.distance >= length);
-  const previous = kept.at(-1);
-  if (next === undefined || previous === undefined) {
-    return kept;
-  }
-  const fraction = (length - previous.distance) / (next.distance - previous.distance || 1);
-  return [
-    ...kept,
-    {
-      position: interpolate(previous.position, next.position, fraction),
-      distance: length,
-      elevation: previous.elevation + (next.elevation - previous.elevation) * fraction,
-    },
-  ];
-}
-
-function cutPath(path: readonly Position[], length: number): Position[] {
-  const distances = cumulativeDistances(path);
-  const kept = path.filter((_, index) => (distances[index] ?? Infinity) < length);
-  const nextIndex = distances.findIndex((distance) => distance >= length);
-  const previous = kept.at(-1);
-  const next = path[nextIndex];
-  if (next === undefined || previous === undefined) {
-    return kept;
-  }
-  const from = distances[nextIndex - 1] ?? 0;
-  const to = distances[nextIndex] ?? from;
-  return [...kept, interpolate(previous, next, (length - from) / (to - from || 1))];
 }
 
 /** Whether two Itineraries start and end at about the same places. */
@@ -249,12 +224,22 @@ function toItinerary(
   request: UphillRequest,
 ): UphillItinerary {
   const profile = stretch.reversed ? reverse(path.profile) : path.profile;
-  const samples = profile.slice(stretch.first, stretch.last + 1);
+  const before = profile[stretch.last - 1];
+  const after = profile[stretch.last];
+  if (before === undefined || after === undefined) {
+    throw new RangeError('A stretch ends between two samples.');
+  }
+  const end = {
+    position: interpolate(before.position, after.position, stretch.fraction),
+    distance: before.distance + (after.distance - before.distance) * stretch.fraction,
+    elevation: before.elevation + (after.elevation - before.elevation) * stretch.fraction,
+  };
+  const samples = [...profile.slice(stretch.first, stretch.last), end];
   const from = samples[0]?.distance ?? 0;
   const rebased = samples.map((sample) => ({ ...sample, distance: sample.distance - from }));
 
   const total = path.profile.at(-1)?.distance ?? 0;
-  const to = samples.at(-1)?.distance ?? from;
+  const to = end.distance;
   const geometry = stretch.reversed
     ? geometryBetween(path, total - to, total - from).toReversed()
     : geometryBetween(path, from, to);
@@ -278,4 +263,24 @@ function toItinerary(
           },
         ],
   };
+}
+
+/**
+ * Adds a candidate to proposals found so far, or replaces the same stretch found
+ * earlier when `better` prefers the new one.
+ */
+export function keepBest(
+  found: UphillItinerary[],
+  candidate: UphillItinerary,
+  better: (a: UphillItinerary, b: UphillItinerary) => boolean,
+): void {
+  const same = found.findIndex((itinerary) => isSameItinerary(itinerary, candidate));
+  if (same === -1) {
+    found.push(candidate);
+    return;
+  }
+  const existing = found[same];
+  if (existing !== undefined && better(candidate, existing)) {
+    found[same] = candidate;
+  }
 }

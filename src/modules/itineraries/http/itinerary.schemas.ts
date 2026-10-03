@@ -38,17 +38,17 @@ const differenceSchema = z
   ])
   .meta({ id: 'ItineraryDifference' });
 
+const lineStringSchema = z
+  .object({
+    type: z.literal('LineString'),
+    coordinates: z.array(z.tuple([z.number(), z.number()])),
+  })
+  .meta({ description: 'GeoJSON LineString ([longitude, latitude] pairs).' });
+
 const itineraryBase = {
   exact: z.boolean().meta({ description: 'True when the proposal matches the request.' }),
   differences: z.array(differenceSchema),
-  path: z
-    .object({
-      type: z.literal('LineString'),
-      coordinates: z.array(z.tuple([z.number(), z.number()])),
-    })
-    .meta({
-      description: 'GeoJSON LineString of the routed geometry ([longitude, latitude] pairs).',
-    }),
+  path: lineStringSchema,
   elevationProfile: z.array(
     z.object({ distance: metres('Distance from the beginning'), elevation: metres('Elevation') }),
   ),
@@ -121,13 +121,6 @@ export const uphillItinerariesSchema = z
   .meta({ id: 'UphillItineraries' });
 
 export type UphillItineraryResponse = z.infer<typeof uphillItinerarySchema>;
-
-const lineStringSchema = z
-  .object({
-    type: z.literal('LineString'),
-    coordinates: z.array(z.tuple([z.number(), z.number()])),
-  })
-  .meta({ description: 'GeoJSON LineString ([longitude, latitude] pairs).' });
 
 export const hillSessionRequestSchema = z
   .object({

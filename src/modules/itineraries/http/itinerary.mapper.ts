@@ -8,7 +8,13 @@ import { isRunning, type Activity } from '../../../shared/domain/activity.ts';
 import { toEffortResponse } from '../../../shared/http/effort.ts';
 import { round, roundCoordinate } from '../../../shared/http/rounding.ts';
 import type { Position } from '../../../shared/domain/position.ts';
-import type { HillSession, LoopItinerary, UphillItinerary } from '../domain/itinerary.ts';
+import { warmUpLength } from '../domain/hill-session.ts';
+import type {
+  Difference,
+  HillSession,
+  LoopItinerary,
+  UphillItinerary,
+} from '../domain/itinerary.ts';
 import type {
   HillSessionResponse,
   LoopItineraryResponse,
@@ -21,26 +27,34 @@ const point = ({ position, elevation }: ProfilePoint) => ({
   elevation: round(elevation, 1),
 });
 
+const profileResponse = (profile: ElevationProfile) =>
+  profile.map(({ distance, elevation }) => ({
+    distance: round(distance, 1),
+    elevation: round(elevation, 1),
+  }));
+
+const lineString = (positions: readonly Position[]) => ({
+  type: 'LineString' as const,
+  coordinates: positions.map((position): [number, number] => [
+    roundCoordinate(position.longitude),
+    roundCoordinate(position.latitude),
+  ]),
+});
+
+const differencesResponse = (differences: readonly Difference[]) =>
+  differences.map((difference) =>
+    difference.kind === 'gradient'
+      ? { ...difference, actual: round(difference.actual, 4) }
+      : difference,
+  );
+
 /** Fields every kind of Itinerary shares; the running effort only for running Activities. */
 function common(itinerary: UphillItinerary | LoopItinerary, activity: Activity) {
   return {
     exact: itinerary.exact,
-    differences: itinerary.differences.map((difference) =>
-      difference.kind === 'gradient'
-        ? { ...difference, actual: round(difference.actual, 4) }
-        : difference,
-    ),
-    path: {
-      type: 'LineString' as const,
-      coordinates: itinerary.path.map((position): [number, number] => [
-        roundCoordinate(position.longitude),
-        roundCoordinate(position.latitude),
-      ]),
-    },
-    elevationProfile: itinerary.profile.map(({ distance, elevation }) => ({
-      distance: round(distance, 1),
-      elevation: round(elevation, 1),
-    })),
+    differences: differencesResponse(itinerary.differences),
+    path: lineString(itinerary.path),
+    elevationProfile: profileResponse(itinerary.profile),
     length: round(itinerary.measurements.length, 1),
     heightGained: round(itinerary.measurements.heightGained, 1),
     ...(isRunning(activity) && { effort: toEffortResponse(itinerary.measurements) }),
@@ -73,30 +87,12 @@ export function toUphillItineraryResponse(
   };
 }
 
-const profileResponse = (profile: ElevationProfile) =>
-  profile.map(({ distance, elevation }) => ({
-    distance: round(distance, 1),
-    elevation: round(elevation, 1),
-  }));
-
-const lineString = (positions: readonly Position[]) => ({
-  type: 'LineString' as const,
-  coordinates: positions.map((position): [number, number] => [
-    roundCoordinate(position.longitude),
-    roundCoordinate(position.latitude),
-  ]),
-});
-
 export function toHillSessionResponse(session: HillSession): HillSessionResponse {
   const { repeat, measurements } = session;
   return {
     kind: 'session',
     exact: session.exact,
-    differences: session.differences.map((difference) =>
-      difference.kind === 'gradient'
-        ? { ...difference, actual: round(difference.actual, 4) }
-        : difference,
-    ),
+    differences: differencesResponse(session.differences),
     repeats: session.repeats,
     repeat: {
       path: lineString(repeat.path),
@@ -110,7 +106,7 @@ export function toHillSessionResponse(session: HillSession): HillSessionResponse
     warmUp: {
       path: lineString(session.warmUp.path),
       elevationProfile: profileResponse(session.warmUp.profile),
-      length: round(session.warmUp.profile.at(-1)?.distance ?? 0, 1),
+      length: round(warmUpLength(session), 1),
     },
     totals: {
       length: round(measurements.length, 1),
