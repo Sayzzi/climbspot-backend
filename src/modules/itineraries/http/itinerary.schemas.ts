@@ -166,9 +166,15 @@ export const hillSessionSchema = z
         top: pointSchema,
       })
       .meta({ description: 'The Uphill Itinerary run up for each Repeat.' }),
-    warmUp: z.object({ path: lineStringSchema, length: metres('Length of the Warm-up') }).meta({
-      description: 'From `start` to the foot of the Repeat; the Cool-down is the same way back.',
-    }),
+    warmUp: z
+      .object({
+        path: lineStringSchema,
+        elevationProfile: itineraryBase.elevationProfile,
+        length: metres('Length of the Warm-up'),
+      })
+      .meta({
+        description: 'From `start` to the foot of the Repeat; the Cool-down is the same way back.',
+      }),
     totals: z
       .object({
         length: metres('Length of the whole session'),

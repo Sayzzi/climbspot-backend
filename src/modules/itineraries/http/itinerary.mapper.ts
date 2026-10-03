@@ -1,6 +1,7 @@
 import {
   firstPoint,
   lastPoint,
+  type ElevationProfile,
   type ProfilePoint,
 } from '../../../shared/domain/survey/elevation-profile.ts';
 import { isRunning, type Activity } from '../../../shared/domain/activity.ts';
@@ -72,6 +73,12 @@ export function toUphillItineraryResponse(
   };
 }
 
+const profileResponse = (profile: ElevationProfile) =>
+  profile.map(({ distance, elevation }) => ({
+    distance: round(distance, 1),
+    elevation: round(elevation, 1),
+  }));
+
 const lineString = (positions: readonly Position[]) => ({
   type: 'LineString' as const,
   coordinates: positions.map((position): [number, number] => [
@@ -93,10 +100,7 @@ export function toHillSessionResponse(session: HillSession): HillSessionResponse
     repeats: session.repeats,
     repeat: {
       path: lineString(repeat.path),
-      elevationProfile: repeat.profile.map(({ distance, elevation }) => ({
-        distance: round(distance, 1),
-        elevation: round(elevation, 1),
-      })),
+      elevationProfile: profileResponse(repeat.profile),
       length: round(repeat.measurements.length, 1),
       averageGradient: round(repeat.measurements.averageGradient, 4),
       maximumGradient: round(repeat.measurements.maximumGradient, 4),
@@ -105,6 +109,7 @@ export function toHillSessionResponse(session: HillSession): HillSessionResponse
     },
     warmUp: {
       path: lineString(session.warmUp.path),
+      elevationProfile: profileResponse(session.warmUp.profile),
       length: round(session.warmUp.profile.at(-1)?.distance ?? 0, 1),
     },
     totals: {

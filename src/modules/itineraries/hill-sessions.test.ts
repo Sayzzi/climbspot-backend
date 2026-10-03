@@ -35,7 +35,11 @@ interface SessionBody {
     path: { coordinates: [number, number][] };
     elevationProfile: { distance: number; elevation: number }[];
   };
-  warmUp: { length: number; path: { coordinates: [number, number][] } };
+  warmUp: {
+    length: number;
+    path: { coordinates: [number, number][] };
+    elevationProfile: { distance: number; elevation: number }[];
+  };
   totals: {
     length: number;
     heightGained: number;
@@ -66,6 +70,12 @@ describe('POST /itineraries/sessions', () => {
     ).toBeLessThan(5);
     expect(session?.warmUp.length).toBeGreaterThanOrEqual(950);
     expect(session?.warmUp.length).toBeLessThan(1200);
+    // The Warm-up's elevations, for exports: flat, then up to the foot.
+    expect(session?.warmUp.elevationProfile[0]).toEqual({ distance: 0, elevation: 200 });
+    expect(session?.warmUp.elevationProfile.at(-1)?.distance).toBeCloseTo(
+      session?.warmUp.length ?? 0,
+      0,
+    );
   });
 
   it('totals the whole session, computed by hand', async () => {
