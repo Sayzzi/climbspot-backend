@@ -107,7 +107,7 @@ A running effort in kilometres: the length plus one kilometre for every 100 m of
 _Avoid_: Effort points, Equivalent kilometres
 
 **Flat Pace**:
-The pace a Visitor runs on the flat, which they state themselves. Estimated Times are worked out from it.
+The pace a Visitor runs on the flat: worked out from their Recorded Runs when they have a Strava Connection, unless they state it themselves. Estimated Times are worked out from it.
 _Avoid_: Speed, Target pace
 
 **Flat-Equivalent Distance**:
@@ -125,9 +125,29 @@ Anyone searching for Ascents or asking for Itineraries, signed in or not.
 _Avoid_: User, Guest
 
 **Contributor**:
-A signed-in person who adds Ascents to the catalogue.
+A signed-in Visitor who adds Ascents to the catalogue; any signed-in Visitor may. Who added an Ascent is never shown to others.
 _Avoid_: User, Member, Author
 
 ## Reserved for later
 
 Climbing sites will arrive as their own concepts (**Crag**, **Gym**, **Route**, **Boulder**). "Climb" is never used for any of them, nor for an Ascent.
+
+### Strava
+
+**Strava Connection**:
+The link a signed-in Visitor makes between their ClimbSpot account and their Strava account. Ending it erases everything imported through it.
+_Avoid_: Integration, Sync, Link
+
+**Recorded Run**:
+A running or trail-running outing a Visitor recorded and imported through their Strava Connection. Only its owner ever sees it.
+_Avoid_: Activity (an Activity is a way of travelling), Workout, Session
+
+**Ascent Time**:
+How long a Visitor took from the Start to the Top of an Ascent during a Recorded Run, following its path. Only its owner ever sees it.
+_Avoid_: Effort, Segment time, Split
+
+### Saving
+
+**Saved Itinerary**:
+A frozen copy of a proposal (an Itinerary or a Hill Session) that a signed-in Visitor keeps, as it was when proposed.
+_Avoid_: Favourite, Bookmark, Route
