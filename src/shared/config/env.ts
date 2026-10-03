@@ -19,6 +19,8 @@ const envSchema = z
           .filter(Boolean),
       ),
     DATABASE_URL: z.url(),
+    /** The Supabase project whose access tokens identify signed-in Visitors (ADR 0009). */
+    SUPABASE_URL: z.url(),
     ELEVATION_API_URL: z.url().default('https://api.open-meteo.com/v1/elevation'),
     /** OpenRouteService used to plan Itineraries (ADR 0008): hosted, or self-hosted. */
     ORS_URL: z.url().default(HOSTED_OPEN_ROUTE_SERVICE),

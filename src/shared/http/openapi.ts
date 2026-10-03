@@ -16,6 +16,12 @@ const sharedSchemas: OpenApiDefinition[] = [{ type: 'schema', schema: apiErrorSc
 
 export function buildOpenApiDocument(modules: readonly HttpModule[]): OpenApiDocument {
   const registry = new OpenAPIRegistry();
+  registry.registerComponent('securitySchemes', 'bearerAuth', {
+    type: 'http',
+    scheme: 'bearer',
+    bearerFormat: 'JWT',
+    description: 'Supabase Auth access token of the signed-in Visitor (ADR 0009).',
+  });
 
   for (const module of modules) {
     module.registerOpenApi(registry);

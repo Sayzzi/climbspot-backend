@@ -43,6 +43,13 @@
       "when": 1791026551354,
       "tag": "0005_measure_effort",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791040847243,
+      "tag": "0006_create_accounts",
+      "breakpoints": true
     }
   ]
 }
