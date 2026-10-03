@@ -18,6 +18,20 @@ export function distanceBetween(from: Position, to: Position): number {
   return 2 * EARTH_RADIUS * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
+/** Metres per degree of latitude on the mean Earth sphere. */
+export const METRES_PER_DEGREE_OF_LATITUDE = (Math.PI * EARTH_RADIUS) / 180;
+
+/** The position `metres` away from `from` towards `bearing` (degrees, 0 = north, 90 = east). */
+export function offset(from: Position, bearing: number, metres: number): Position {
+  const radians = toRadians(bearing);
+  const metresPerDegreeOfLongitude =
+    METRES_PER_DEGREE_OF_LATITUDE * Math.cos(toRadians(from.latitude));
+  return {
+    latitude: from.latitude + (metres * Math.cos(radians)) / METRES_PER_DEGREE_OF_LATITUDE,
+    longitude: from.longitude + (metres * Math.sin(radians)) / metresPerDegreeOfLongitude,
+  };
+}
+
 /** Position at `fraction` (0–1) of the way from `from` to `to`; accurate for short segments. */
 export function interpolate(from: Position, to: Position, fraction: number): Position {
   return {

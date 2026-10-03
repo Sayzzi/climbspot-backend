@@ -1,5 +1,5 @@
 import type { Position } from '../../../shared/domain/position.ts';
-import { distanceBetween } from '../../../shared/domain/survey/geodesy.ts';
+import { distanceBetween, offset } from '../../../shared/domain/survey/geodesy.ts';
 import { heightGained, measure } from '../../../shared/domain/survey/measurements.ts';
 import {
   HILLY_ABOVE,
@@ -10,19 +10,6 @@ import {
 } from './itinerary-rules.ts';
 import type { LoopItinerary, LoopRequest, Relief } from './itinerary.ts';
 import { cumulativeDistances, geometryBetween, type SurveyedPath } from './surveyed-path.ts';
-
-const METRES_PER_DEGREE_OF_LATITUDE = 111_195;
-
-/** A position `metres` away from `from` towards `bearing` (degrees, 0 = north). */
-function offset(from: Position, bearing: number, metres: number): Position {
-  const radians = (bearing * Math.PI) / 180;
-  const metresPerDegreeOfLongitude =
-    METRES_PER_DEGREE_OF_LATITUDE * Math.cos((from.latitude * Math.PI) / 180);
-  return {
-    latitude: from.latitude + (metres * Math.cos(radians)) / METRES_PER_DEGREE_OF_LATITUDE,
-    longitude: from.longitude + (metres * Math.sin(radians)) / metresPerDegreeOfLongitude,
-  };
-}
 
 /** First radius to try: a circle whose winding perimeter is the asked distance. */
 export const initialLoopRadius = (distance: number) =>

@@ -5,6 +5,7 @@ import { askUphill, itinerariesApp } from '../../../test/itineraries-app.ts';
 import { fakeRouting, legs, outAndBack } from '../../../test/routing.ts';
 import { METRES_PER_DEGREE_OF_LATITUDE, REFERENCE } from '../../../test/terrain.ts';
 import type { Position } from '../../shared/domain/position.ts';
+import { distanceBetween } from '../../shared/domain/survey/geodesy.ts';
 import { RoutingUnavailableError } from './domain/routing-provider.ts';
 
 const northOfReference = (p: Position) =>
@@ -84,6 +85,7 @@ describe('POST /itineraries/uphill', () => {
 
   it('turns a stretch found going down the right way up', async () => {
     const { provider } = fakeRouting({
+      routeThrough: () => undefined,
       elevationAt: planar(0.04),
       roundTrip: ({ start, length, variant }) =>
         variant === 1 ? outAndBack(start, 180, length) : undefined,
@@ -120,6 +122,7 @@ describe('POST /itineraries/uphill', () => {
       return 190 + 0.06 * (north - 600);
     };
     const { provider } = fakeRouting({
+      routeThrough: () => undefined,
       elevationAt: dipping,
       roundTrip: ({ start, length, variant }) =>
         variant === 1 ? outAndBack(start, 0, length) : undefined,
@@ -133,6 +136,7 @@ describe('POST /itineraries/uphill', () => {
   it('only offers exact stretches starting within the radius', async () => {
     // 3 km east on the flat, then 1.25 km up northwards and back.
     const { provider } = fakeRouting({
+      routeThrough: () => undefined,
       elevationAt: planar(0.04),
       roundTrip: ({ start, variant }) =>
         variant === 1 ? legs(start, [90, 3000], [0, 1250], [180, 1250], [270, 3000]) : undefined,
@@ -150,15 +154,63 @@ describe('POST /itineraries/uphill', () => {
     expect(itineraries(wider.body)[0]?.distanceToStart).toBeCloseTo(3000, -2);
   });
 
+  it('reaches out towards the hills within the radius when there are none nearby', async () => {
+    // Flat for 3 km northwards, then rising at 4 %; the round trips stay on the flat.
+    const { provider, calls } = fakeRouting({
+      elevationAt: (p) => 200 + 0.04 * Math.max(0, northOfReference(p) - 3000),
+      roundTrip: ({ start, length, variant }) =>
+        variant === 1 ? outAndBack(start, 90, length) : undefined,
+    });
+
+    const [found] = itineraries(
+      (await askUphill(itinerariesApp(provider), ask({ radius: 10_000 }))).body,
+    );
+
+    expect(found).toMatchObject({ exact: true });
+    expect(found?.averageGradient).toBeCloseTo(0.04, 2);
+    expect(found?.distanceToStart).toBeGreaterThanOrEqual(2900);
+    for (const call of calls.routeThrough) {
+      expect(call.positions[0]).toEqual(START);
+      expect(distanceBetween(START, call.positions.at(-1) ?? START)).toBeLessThanOrEqual(10_000);
+    }
+  });
+
+  it('prefers a steady stretch to one with a wall steeper than asked', async () => {
+    // Northwards a steady 4 %; eastwards flat for 650 m, then a 10 % wall: 3.5 % on average.
+    const terrain = (p: Position) =>
+      200 +
+      0.04 * Math.max(0, northOfReference(p)) +
+      0.1 * Math.min(350, Math.max(0, eastOfReference(p) - 650));
+    const bearings: Record<number, number> = { 1: 90, 2: 0 };
+    const { provider } = fakeRouting({
+      elevationAt: terrain,
+      roundTrip: ({ start, length, variant }) =>
+        bearings[variant] === undefined
+          ? undefined
+          : outAndBack(start, bearings[variant] ?? 0, length),
+      routeThrough: () => undefined,
+    });
+
+    const found = itineraries((await askUphill(itinerariesApp(provider), ask())).body);
+
+    expect(found.map((itinerary) => Math.round(itinerary.averageGradient * 1000) / 10)).toEqual([
+      4, 3.5,
+    ]);
+  });
+
   it('ranks exact stretches first, nearest the middle of the range', async () => {
     // North rises 4 %, east 1 %: north-east about 3.5 %, east 1 % (too flat).
-    const geometry: Record<number, number> = { 1: 0, 2: 90, 3: 45 };
+    // Round trips go north and east; the first way heading out goes north-east.
+    const geometry: Record<number, number> = { 1: 0, 2: 90 };
+    let spokes = 0;
     const { provider } = fakeRouting({
       elevationAt: planar(0.04, 0.01),
       roundTrip: ({ start, length, variant }) =>
         geometry[variant] === undefined
           ? undefined
           : outAndBack(start, geometry[variant] ?? 0, length),
+      routeThrough: ({ positions }) =>
+        (spokes += 1) === 1 ? outAndBack(positions[0] ?? START, 45, 2500) : undefined,
     });
 
     const found = itineraries((await askUphill(itinerariesApp(provider), ask())).body);
@@ -200,35 +252,45 @@ describe('POST /itineraries/uphill', () => {
     const { provider, calls } = fakeRouting({
       elevationAt: planar(0.04),
       roundTrip: () => undefined,
+      routeThrough: () => undefined,
     });
 
     await askUphill(itinerariesApp(provider), ask({ activity: 'road_cycling', length: 2000 }));
 
     expect(calls.roundTrip.length).toBeGreaterThan(0);
-    expect(calls.roundTrip.length).toBeLessThanOrEqual(10);
+    expect(calls.roundTrip.length + calls.routeThrough.length).toBeLessThanOrEqual(10);
     expect(new Set(calls.roundTrip.map((call) => call.variant)).size).toBe(calls.roundTrip.length);
     for (const call of calls.roundTrip) {
       expect(call).toMatchObject({ activity: 'road_cycling', length: 5000, start: START });
     }
+    for (const call of calls.routeThrough) {
+      expect(call.activity).toBe('road_cycling');
+    }
   });
 
   it('stops asking once three exact stretches are found', async () => {
-    const bearings: Record<number, number> = { 1: 0, 2: 30, 3: 330, 4: 60, 5: 300 };
+    const bearings: Record<number, number> = { 1: 0, 2: 30 };
     const { provider, calls } = fakeRouting({
       elevationAt: planar(0.04),
       roundTrip: ({ start, length, variant }) =>
         bearings[variant] === undefined
           ? undefined
           : outAndBack(start, bearings[variant] ?? 0, length),
+      routeThrough: ({ positions }) => outAndBack(positions[0] ?? START, 330, 2500),
     });
 
     await askUphill(itinerariesApp(provider), ask());
 
-    expect(calls.roundTrip).toHaveLength(3);
+    expect(calls.roundTrip).toHaveLength(2);
+    expect(calls.routeThrough).toHaveLength(1);
   });
 
   it('answers an empty list when no way can be found', async () => {
-    const { provider } = fakeRouting({ elevationAt: planar(0.04), roundTrip: () => undefined });
+    const { provider } = fakeRouting({
+      elevationAt: planar(0.04),
+      roundTrip: () => undefined,
+      routeThrough: () => undefined,
+    });
 
     const response = await askUphill(itinerariesApp(provider), ask());
 

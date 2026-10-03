@@ -27,9 +27,12 @@ export class GenerateLoops {
   async execute(request: LoopRequest): Promise<LoopItinerary[]> {
     const found: LoopItinerary[] = [];
     let calls = 0;
+    // The ways wind about as much in every direction: each bearing starts from the
+    // radius that last fitted, saving a rescaling call.
+    let fittingRadius = initialLoopRadius(request.distance);
 
     for (const bearing of LOOP_BEARINGS) {
-      let radius = initialLoopRadius(request.distance);
+      let radius = fittingRadius;
 
       for (
         let attempt = 0;
@@ -52,6 +55,7 @@ export class GenerateLoops {
           break;
         }
         if (fitsLength(length, request.distance)) {
+          fittingRadius = radius;
           if (!found.some((other) => isSameLoop(other, loop))) {
             found.push(loop);
           }

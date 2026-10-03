@@ -12,14 +12,28 @@ export const MAXIMUM_PROPOSALS = 3;
 /** Routing calls one planning request may make. */
 export const ROUTING_CALL_BUDGET = 10;
 
-/** Round trips explored around the point when looking for an Uphill Itinerary. */
-export const UPHILL_ROUND_TRIPS = 6;
+/** Round trips explored around the point first when looking for an Uphill Itinerary. */
+export const UPHILL_ROUND_TRIPS = 2;
 
 /** Length of those round trips, as a multiple of the asked length. */
 export const UPHILL_ROUND_TRIP_FACTOR = 2.5;
 
-/** Bearings at which Loops are tried, in degrees: each sends the Loop another way. */
-export const LOOP_BEARINGS = [0, 120, 240] as const;
+/**
+ * Then ways from the point towards these bearings (degrees), alternating so that a
+ * spent budget still leaves the explored directions spread around the point. Round
+ * trips stay near the point; these reach the hills elsewhere within the radius.
+ */
+export const UPHILL_SPOKE_BEARINGS = [0, 180, 90, 270, 45, 225, 135, 315] as const;
+
+/** How far those ways head, as a share of the radius. */
+export const UPHILL_SPOKE_REACH = 0.8;
+
+/**
+ * Bearings at which Loops are tried, in degrees: each sends the Loop another way. The
+ * route ignores the Relief, so more directions give it more Loops to choose from;
+ * they alternate so that a spent budget still leaves them spread around the point.
+ */
+export const LOOP_BEARINGS = [0, 180, 60, 240, 120, 300] as const;
 
 /** Attempts per bearing to bring a Loop to the asked length by rescaling it. */
 export const LOOP_ATTEMPTS_PER_BEARING = 3;

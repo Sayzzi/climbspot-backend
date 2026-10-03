@@ -97,13 +97,29 @@ describe('POST /itineraries/loops', () => {
     }
   });
 
+  it('tries Loops in six directions around the point before settling for another Relief', async () => {
+    const { provider, calls } = fakeRouting({ elevationAt: risingNorth(0) });
+
+    await askLoops(itinerariesApp(provider), ask({ relief: 'hilly' }));
+
+    expect(calls.routeThrough.length).toBeLessThanOrEqual(10);
+    const directions = calls.routeThrough.map(({ positions }) => {
+      const waypoints = positions.slice(1, -1);
+      const north = waypoints.reduce((sum, p) => sum + p.latitude - START.latitude, 0);
+      const east = waypoints.reduce((sum, p) => sum + p.longitude - START.longitude, 0);
+      return Math.round(((Math.atan2(east, north) * 180) / Math.PI + 360) / 60) % 6;
+    });
+    expect(new Set(directions).size).toBe(6);
+  });
+
   it('stops asking once three exact Loops are found', async () => {
     const { provider, calls } = fakeRouting({ elevationAt: risingNorth(0) });
 
     const found = loops((await askLoops(itinerariesApp(provider), ask())).body);
 
     expect(found).toHaveLength(3);
-    expect(calls.routeThrough).toHaveLength(6);
+    // Two calls to fit the first Loop, then one per bearing from the radius that fitted.
+    expect(calls.routeThrough).toHaveLength(4);
   });
 
   it('never offers a Loop that cannot be brought to the asked length', async () => {

@@ -1,4 +1,4 @@
-import { distanceBetween, interpolate } from './geodesy.ts';
+import { distanceBetween, interpolate, METRES_PER_DEGREE_OF_LATITUDE } from './geodesy.ts';
 import type { Position } from '../position.ts';
 
 /** A position on a path, with its distance from the path's first position. */
@@ -57,12 +57,11 @@ export function simplify(path: readonly Position[], tolerance: number): Position
   }
 
   // Local flat projection in metres around the first position: precise enough for an Ascent.
-  const metresPerDegreeOfLatitude = 111_195;
   const metresPerDegreeOfLongitude =
-    metresPerDegreeOfLatitude * Math.cos((first.latitude * Math.PI) / 180);
+    METRES_PER_DEGREE_OF_LATITUDE * Math.cos((first.latitude * Math.PI) / 180);
   const points = path.map(({ latitude, longitude }) => ({
     x: (longitude - first.longitude) * metresPerDegreeOfLongitude,
-    y: (latitude - first.latitude) * metresPerDegreeOfLatitude,
+    y: (latitude - first.latitude) * METRES_PER_DEGREE_OF_LATITUDE,
   }));
 
   const keep = new Array<boolean>(path.length).fill(false);

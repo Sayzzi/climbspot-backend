@@ -73,15 +73,21 @@ export function bestUphillStretch(
   return best && toItinerary(path, best, request);
 }
 
-/** Exact first, then closest to the middle of the Gradient range, then nearest. */
+/**
+ * Exact first, then without walls steeper than asked (maximum Gradient above the range,
+ * in whole percents), then closest to the middle of the Gradient range, then nearest.
+ */
 export function rankUphill(
   itineraries: readonly UphillItinerary[],
   request: UphillRequest,
 ): UphillItinerary[] {
   const middle = (request.minGradient + request.maxGradient) / 2;
+  const wall = (itinerary: UphillItinerary) =>
+    Math.round(Math.max(0, itinerary.measurements.maximumGradient - request.maxGradient) * 100);
   return [...itineraries].sort(
     (a, b) =>
       Number(b.exact) - Number(a.exact) ||
+      wall(a) - wall(b) ||
       Math.abs(a.measurements.averageGradient - middle) -
         Math.abs(b.measurements.averageGradient - middle) ||
       a.distanceToStart - b.distanceToStart,
