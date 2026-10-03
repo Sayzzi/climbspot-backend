@@ -38,17 +38,34 @@ describe('POST /ascents', () => {
 
 describe('POST /ascents measurements', () => {
   it('measures the maximum Gradient on the steepest stretch', async () => {
-    // 500 m at 5 %, then 500 m at 12 %.
+    // 400 m at 5 %, then 1 km at 12 %.
     const terrain = terrainRisingNorth((north) =>
-      north <= 500 ? 200 + 0.05 * north : 225 + 0.12 * (north - 500),
+      north <= 400 ? 200 + 0.05 * north : 220 + 0.12 * (north - 400),
     );
 
-    const response = await upload(buildApp({ terrain }), gpxTrack(straightNorth(REFERENCE, 1000)));
+    const response = await upload(buildApp({ terrain }), gpxTrack(straightNorth(REFERENCE, 1400)));
 
     expect(response.status).toBe(201);
-    expect(response.body.elevationGain).toBeCloseTo(85, 1);
-    expect(response.body.averageGradient).toBeCloseTo(0.085, 3);
+    expect(response.body.elevationGain).toBeCloseTo(140, 1);
+    expect(response.body.averageGradient).toBeCloseTo(0.1, 3);
     expect(response.body.maximumGradient).toBeCloseTo(0.12, 3);
+  });
+
+  it('measures the maximum Gradient over half a kilometre, longer than the terrain model’s noise', async () => {
+    // 1.5 km at 5 %, but the terrain model reads 15 % over 200 m halfway.
+    const terrain = terrainRisingNorth((north) =>
+      north <= 600
+        ? 200 + 0.05 * north
+        : north <= 800
+          ? 230 + 0.15 * (north - 600)
+          : 260 + 0.05 * (north - 800),
+    );
+
+    const response = await upload(buildApp({ terrain }), gpxTrack(straightNorth(REFERENCE, 1500)));
+
+    expect(response.status).toBe(201);
+    // Over the steepest 500 m: 30 m + 15 m = 9 %, not 15 %.
+    expect(response.body.maximumGradient).toBeCloseTo(0.09, 2);
   });
 
   it('turns a path recorded downhill the right way up', async () => {

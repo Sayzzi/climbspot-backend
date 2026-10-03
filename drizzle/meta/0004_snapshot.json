@@ -1,0 +1,168 @@
+{
+  "id": "bfd1d54f-69b6-4df4-8494-bede7a93bcea",
+  "prevId": "962051ed-d539-44dc-a9ad-2801cb85d084",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.ascents": {
+      "name": "ascents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "surface": {
+          "name": "surface",
+          "type": "ascent_surface",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "geography(LineString, 4326)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sampled_path": {
+          "name": "sampled_path",
+          "type": "geography(LineString, 4326)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sample_distances": {
+          "name": "sample_distances",
+          "type": "double precision[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "elevations": {
+          "name": "elevations",
+          "type": "double precision[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start": {
+          "name": "start",
+          "type": "geography(Point, 4326)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "top": {
+          "name": "top",
+          "type": "geography(Point, 4326)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "length": {
+          "name": "length",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "elevation_gain": {
+          "name": "elevation_gain",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "average_gradient": {
+          "name": "average_gradient",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "maximum_gradient": {
+          "name": "maximum_gradient",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "difficulty_score": {
+          "name": "difficulty_score",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "ascent_category",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "ascents_start_idx": {
+          "name": "ascents_start_idx",
+          "columns": [
+            {
+              "expression": "start",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "gist",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.ascent_category": {
+      "name": "ascent_category",
+      "schema": "public",
+      "values": [
+        "uncategorized",
+        "cat4",
+        "cat3",
+        "cat2",
+        "cat1",
+        "hc"
+      ]
+    },
+    "public.ascent_surface": {
+      "name": "ascent_surface",
+      "schema": "public",
+      "values": [
+        "paved",
+        "gravel",
+        "trail"
+      ]
+    }
+  },
+  "schemas": {},
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
