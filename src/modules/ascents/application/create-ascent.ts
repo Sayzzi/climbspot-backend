@@ -1,5 +1,4 @@
 import { ensureNotTooLong } from '../domain/ascent-eligibility.ts';
-import { AscentCreationDisabledError } from '../domain/ascent-errors.ts';
 import {
   PATH_SIMPLIFICATION_TOLERANCE,
   SAMPLING_SPACING,
@@ -18,13 +17,13 @@ export interface CreateAscentInput {
   readonly surface: Surface;
   /** 2D path in either direction; any elevation it came with has already been dropped. */
   readonly path: readonly Position[];
+  /** The signed-in Visitor adding it. */
+  readonly contributorId: string;
 }
 
 export interface CreateAscentDependencies {
   readonly repository: AscentRepository;
   readonly elevationProvider: ElevationProvider;
-  /** Temporary guard until Contributors are authenticated. */
-  readonly creationEnabled: boolean;
   readonly newId: () => string;
   readonly now: () => Date;
 }
@@ -33,17 +32,9 @@ export interface CreateAscentDependencies {
 export class CreateAscent {
   constructor(private readonly dependencies: CreateAscentDependencies) {}
 
-  /** Lets callers refuse early, before receiving an upload. */
-  ensureEnabled(): void {
-    if (!this.dependencies.creationEnabled) {
-      throw new AscentCreationDisabledError();
-    }
-  }
-
-  async execute({ name, surface, path }: CreateAscentInput): Promise<Ascent> {
+  async execute({ name, surface, path, contributorId }: CreateAscentInput): Promise<Ascent> {
     const { repository, elevationProvider, newId, now } = this.dependencies;
 
-    this.ensureEnabled();
     ensureNotTooLong(path);
 
     const samples = resample(path, SAMPLING_SPACING);
@@ -58,6 +49,7 @@ export class CreateAscent {
       surface,
       path: simplify(path, PATH_SIMPLIFICATION_TOLERANCE),
       profile: buildProfile(samples, elevations),
+      contributorId,
       createdAt: now(),
     });
 

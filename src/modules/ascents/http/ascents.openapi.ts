@@ -1,5 +1,6 @@
 import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 
+import { bearerAuth } from '../../../shared/http/identity.ts';
 import { apiErrorSchema } from '../../../shared/http/api-error.ts';
 import {
   MAXIMUM_GPX_FILE_SIZE,
@@ -41,15 +42,14 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
         content: { 'multipart/form-data': { schema: createAscentBodySchema } },
       },
     },
+    security: bearerAuth,
     responses: {
       201: {
         description: 'The Ascent was created.',
         content: { 'application/json': { schema: ascentSchema } },
       },
       400: errorResponse('`VALIDATION_FAILED`: a field is missing or invalid.'),
-      403: errorResponse(
-        '`ASCENT_CREATION_DISABLED`: creating Ascents is disabled on this server.',
-      ),
+      401: errorResponse('`AUTHENTICATION_REQUIRED`: only signed-in Visitors add Ascents.'),
       413: errorResponse(
         `\`GPX_TOO_LARGE\`: the file exceeds ${megabytes(MAXIMUM_GPX_FILE_SIZE)} or its path has more than ${count(MAXIMUM_PATH_POINTS)} points.`,
       ),

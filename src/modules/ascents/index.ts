@@ -16,8 +16,6 @@ export { OpenMeteoElevationProvider } from './infrastructure/open-meteo-elevatio
 export interface AscentsModuleDependencies {
   readonly db: Database;
   readonly elevationProvider: ElevationProvider;
-  /** Temporary guard until Contributors are authenticated. */
-  readonly creationEnabled: boolean;
 }
 
 const basePath = '/ascents';
@@ -25,14 +23,12 @@ const basePath = '/ascents';
 export function createAscentsModule({
   db,
   elevationProvider,
-  creationEnabled,
 }: AscentsModuleDependencies): HttpModule {
   const repository = new DrizzleAscentRepository(db);
 
   const createAscent = new CreateAscent({
     repository,
     elevationProvider,
-    creationEnabled,
     newId: randomUUID,
     now: () => new Date(),
   });

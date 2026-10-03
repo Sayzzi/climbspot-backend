@@ -8,11 +8,12 @@ import type { ElevationProvider } from '../src/modules/ascents/domain/elevation-
 import { createAscentsModule } from '../src/modules/ascents/index.ts';
 import { createDatabase, type DatabaseConnection } from '../src/shared/infrastructure/database.ts';
 import { createTestDatabase, type TestDatabase } from './database.ts';
+import type { Identity } from '../src/shared/domain/identity.ts';
+import { fakeIdentityVerifier, tokenFor, VISITOR_A } from './identity.ts';
 import { uniformGradient } from './terrain.ts';
 
 export interface AscentsAppOptions {
   readonly terrain?: ElevationProvider;
-  readonly creationEnabled?: boolean;
 }
 
 /**
@@ -35,24 +36,26 @@ export function useAscentsApp(): (options?: AscentsAppOptions) => Express {
 
   beforeEach(() => testDatabase.truncate());
 
-  return ({ terrain = uniformGradient(0.08), creationEnabled = true } = {}) =>
+  return ({ terrain = uniformGradient(0.08) } = {}) =>
     createApp({
       logger: pino({ level: 'silent' }),
       corsOrigins: [],
-      modules: [
-        createAscentsModule({ db: connection.db, elevationProvider: terrain, creationEnabled }),
-      ],
+      identityVerifier: fakeIdentityVerifier,
+      modules: [createAscentsModule({ db: connection.db, elevationProvider: terrain })],
     });
 }
 
 export interface UploadFields {
   readonly name?: string;
   readonly surface?: string;
+  /** The signed-in Visitor uploading, Visitor A by default; `null` for nobody. */
+  readonly as?: Identity | null;
 }
 
 export function uploadGpx(app: Express, gpx: string | Buffer, fields: UploadFields = {}) {
-  return request(app)
-    .post('/ascents')
+  const contributor = fields.as === undefined ? VISITOR_A : fields.as;
+  const call = request(app).post('/ascents');
+  return (contributor ? call.set('Authorization', `Bearer ${tokenFor(contributor)}`) : call)
     .field('name', fields.name ?? 'Côte de test')
     .field('surface', fields.surface ?? 'paved')
     .attach('gpx', Buffer.from(gpx), {

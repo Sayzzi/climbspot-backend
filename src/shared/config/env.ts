@@ -26,17 +26,11 @@ const envSchema = z
     ORS_URL: z.url().default(HOSTED_OPEN_ROUTE_SERVICE),
     /** Key for the hosted OpenRouteService; a self-hosted one needs none. */
     ORS_API_KEY: z.string().min(1).optional(),
-    /** Temporary guard until Contributors are authenticated; off in production by default. */
-    ASCENT_CREATION_ENABLED: z.stringbool().optional(),
   })
   .refine((env) => env.ORS_URL !== HOSTED_OPEN_ROUTE_SERVICE || env.ORS_API_KEY !== undefined, {
     path: ['ORS_API_KEY'],
     message: 'The hosted OpenRouteService needs an API key.',
-  })
-  .transform(({ ASCENT_CREATION_ENABLED, ...env }) => ({
-    ...env,
-    ASCENT_CREATION_ENABLED: ASCENT_CREATION_ENABLED ?? env.NODE_ENV !== 'production',
-  }));
+  });
 
 export type Env = z.infer<typeof envSchema>;
 

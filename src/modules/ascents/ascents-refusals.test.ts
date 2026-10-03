@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { uploadGpx, useAscentsApp } from '../../../test/ascents-app.ts';
 import { gpxTrack, type GpxPoint } from '../../../test/gpx.ts';
+import { tokenFor, VISITOR_A } from '../../../test/identity.ts';
 import {
   REFERENCE,
   straightNorth,
@@ -227,7 +228,9 @@ describe('POST /ascents refusals: elevation service', () => {
 
 describe('POST /ascents refusals: fields', () => {
   const send = (app: Express, fields: Record<string, string>, withFile = true) => {
-    const req = request(app).post('/ascents');
+    const req = request(app)
+      .post('/ascents')
+      .set('Authorization', `Bearer ${tokenFor(VISITOR_A)}`);
     for (const [name, value] of Object.entries(fields)) {
       void req.field(name, value);
     }
@@ -265,6 +268,7 @@ describe('POST /ascents refusals: fields', () => {
   it('refuses a file sent under another field name with VALIDATION_FAILED', async () => {
     const response = await request(buildApp())
       .post('/ascents')
+      .set('Authorization', `Bearer ${tokenFor(VISITOR_A)}`)
       .field('name', 'Côte')
       .field('surface', 'paved')
       .attach('track', Buffer.from(oneKilometre), { filename: 'ascent.gpx' });
@@ -297,7 +301,7 @@ describe('POST /ascents refusals: OpenAPI', () => {
     const response = await request(buildApp()).get('/openapi.json');
 
     expect(Object.keys(response.body.paths['/ascents'].post.responses)).toEqual(
-      expect.arrayContaining(['400', '403', '413', '422', '503']),
+      expect.arrayContaining(['400', '401', '413', '422', '503']),
     );
   });
 });

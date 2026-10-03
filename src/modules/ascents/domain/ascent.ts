@@ -20,6 +20,8 @@ export interface Ascent {
   /** Samples every SAMPLING_SPACING metres, from Start to Top: what is measured. */
   readonly profile: ElevationProfile;
   readonly measurements: Measurements;
+  /** The signed-in Visitor who added it, if known; never shown to others. */
+  readonly contributorId: string | undefined;
   readonly createdAt: Date;
 }
 
@@ -48,6 +50,7 @@ export interface NewAscent {
   /** Path and profile in the direction they were provided; both are turned uphill if needed. */
   readonly path: readonly Position[];
   readonly profile: ElevationProfile;
+  readonly contributorId: string;
   readonly createdAt: Date;
 }
 
@@ -73,7 +76,7 @@ export function topOf(ascent: Ascent): ProfilePoint {
 }
 
 export function summarize(ascent: Ascent): AscentSummary {
-  const { path: _path, profile: _profile, ...identity } = ascent;
+  const { path: _path, profile: _profile, contributorId: _contributor, ...identity } = ascent;
   const toPoint = ({ position, elevation }: ProfilePoint): AscentPoint => ({ position, elevation });
 
   return { ...identity, start: toPoint(startOf(ascent)), top: toPoint(topOf(ascent)) };

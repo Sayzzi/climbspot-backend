@@ -21,7 +21,6 @@ describe('loadEnv', () => {
       DATABASE_URL: databaseUrl,
       SUPABASE_URL: supabaseUrl,
       ELEVATION_API_URL: 'https://api.open-meteo.com/v1/elevation',
-      ASCENT_CREATION_ENABLED: true,
       ORS_URL: 'https://api.openrouteservice.org',
       ORS_API_KEY: 'ors-key',
     });
@@ -42,52 +41,6 @@ describe('loadEnv', () => {
 
     expect(env.ORS_URL).toBe('http://localhost:8080/ors');
     expect(env.ORS_API_KEY).toBeUndefined();
-  });
-
-  it('disables Ascent creation in production unless explicitly enabled', () => {
-    expect(
-      loadEnv({
-        DATABASE_URL: databaseUrl,
-        SUPABASE_URL: supabaseUrl,
-        ORS_API_KEY: 'ors-key',
-        NODE_ENV: 'production',
-      }),
-    ).toMatchObject({
-      ASCENT_CREATION_ENABLED: false,
-    });
-    expect(
-      loadEnv({
-        DATABASE_URL: databaseUrl,
-        SUPABASE_URL: supabaseUrl,
-        ORS_API_KEY: 'ors-key',
-        NODE_ENV: 'production',
-        ASCENT_CREATION_ENABLED: 'true',
-      }),
-    ).toMatchObject({ ASCENT_CREATION_ENABLED: true });
-  });
-
-  it('lets Ascent creation be disabled outside production', () => {
-    expect(
-      loadEnv({
-        DATABASE_URL: databaseUrl,
-        SUPABASE_URL: supabaseUrl,
-        ORS_API_KEY: 'ors-key',
-        ASCENT_CREATION_ENABLED: 'false',
-      }),
-    ).toMatchObject({
-      ASCENT_CREATION_ENABLED: false,
-    });
-  });
-
-  it('rejects an Ascent creation flag that is not a boolean', () => {
-    expect(() =>
-      loadEnv({
-        DATABASE_URL: databaseUrl,
-        SUPABASE_URL: supabaseUrl,
-        ORS_API_KEY: 'ors-key',
-        ASCENT_CREATION_ENABLED: 'maybe',
-      }),
-    ).toThrow(/ASCENT_CREATION_ENABLED/);
   });
 
   it('accepts another elevation API endpoint', () => {

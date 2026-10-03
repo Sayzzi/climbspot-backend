@@ -26,7 +26,6 @@ const app = createApp({
     createAscentsModule({
       db: database.db,
       elevationProvider: new OpenMeteoElevationProvider({ baseUrl: env.ELEVATION_API_URL }),
-      creationEnabled: env.ASCENT_CREATION_ENABLED,
     }),
     createItinerariesModule({
       routingProvider: new OpenRouteServiceRoutingProvider({

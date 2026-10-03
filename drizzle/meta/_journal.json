@@ -50,6 +50,13 @@
       "when": 1791040847243,
       "tag": "0006_create_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791040997914,
+      "tag": "0007_record_contributors",
+      "breakpoints": true
     }
   ]
 }

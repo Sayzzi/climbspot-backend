@@ -49,6 +49,8 @@ export const ascents = pgTable(
     maximumGradient: doublePrecision('maximum_gradient').notNull(),
     difficultyScore: doublePrecision('difficulty_score').notNull(),
     category: ascentCategory().notNull(),
+    /** The signed-in Visitor who added it (ADR 0009); never returned by the API. */
+    contributorId: uuid('contributor_id'),
     flatEquivalentDistance: doublePrecision('flat_equivalent_distance').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
   },

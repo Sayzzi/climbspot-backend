@@ -2,6 +2,7 @@ import { Router, type RequestHandler } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 
+import { signedInVisitor } from '../../../shared/http/identity.ts';
 import { RequestValidationError } from '../../../shared/http/request-validation-error.ts';
 import type { CreateAscent } from '../application/create-ascent.ts';
 import type { FindAscentsNearby } from '../application/find-ascents-nearby.ts';
@@ -35,16 +36,22 @@ export function createAscentsRouter({
 }: AscentsRouterDependencies): Router {
   const router = Router();
 
-  const refuseWhenCreationDisabled: RequestHandler = (_req, _res, next) => {
-    createAscent.ensureEnabled();
+  // Refuses before receiving an upload when nobody is signed in.
+  const requireContributor: RequestHandler = (_req, res, next) => {
+    signedInVisitor(res);
     next();
   };
 
-  router.post('/', refuseWhenCreationDisabled, receiveGpxFile(), async (req, res) => {
+  router.post('/', requireContributor, receiveGpxFile(), async (req, res) => {
     const { name, surface, gpx } = uploadSchema.parse({ ...req.body, gpx: req.file });
     const path = readGpxPath(gpx.buffer.toString('utf8'));
 
-    const ascent = await createAscent.execute({ name, surface, path });
+    const ascent = await createAscent.execute({
+      name,
+      surface,
+      path,
+      contributorId: signedInVisitor(res).visitorId,
+    });
 
     res.status(201).json(toAscentResponse(ascent));
   });

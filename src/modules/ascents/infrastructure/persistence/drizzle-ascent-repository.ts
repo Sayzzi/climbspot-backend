@@ -52,6 +52,7 @@ const ascentColumns = {
   sampleDistances: ascents.sampleDistances,
   elevations: ascents.elevations,
   ...measurementColumns,
+  contributorId: ascents.contributorId,
   createdAt: ascents.createdAt,
 };
 
@@ -79,6 +80,7 @@ export class DrizzleAscentRepository implements AscentRepository {
       start: geographyFromWkt(`POINT(${toWkt(startOf(ascent).position)})`),
       top: geographyFromWkt(`POINT(${toWkt(topOf(ascent).position)})`),
       ...ascent.measurements,
+      contributorId: ascent.contributorId ?? null,
       createdAt: ascent.createdAt,
     });
   }
@@ -154,6 +156,7 @@ function toAscent({
   sampledPath,
   sampleDistances,
   elevations,
+  contributorId,
   createdAt,
   ...measurements
 }: AscentRow): Ascent {
@@ -169,6 +172,7 @@ function toAscent({
     path: positionsOf(path),
     profile: buildProfile(samples, elevations),
     measurements,
+    contributorId: contributorId ?? undefined,
     createdAt,
   };
 }

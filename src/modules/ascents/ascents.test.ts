@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { useAscentsApp, uploadGpx as upload } from '../../../test/ascents-app.ts';
 import { gpxRoute, gpxTrack } from '../../../test/gpx.ts';
+import { VISITOR_A } from '../../../test/identity.ts';
 import {
   northOf,
   REFERENCE,
@@ -222,23 +223,32 @@ describe('POST /ascents Difficulty Score', () => {
   });
 });
 
-describe('POST /ascents creation guard', () => {
-  it('refuses to create Ascents when creation is disabled', async () => {
-    const app = buildApp({ creationEnabled: false });
+describe('POST /ascents by Contributors', () => {
+  it('needs a signed-in Visitor', async () => {
+    const response = await upload(buildApp(), gpxTrack(straightNorth(REFERENCE, 1000)), {
+      as: null,
+    });
 
-    const response = await upload(app, gpxTrack(straightNorth(REFERENCE, 1000)));
-
-    expect(response.status).toBe(403);
-    expect(response.body).toMatchObject({ error: { code: 'ASCENT_CREATION_DISABLED' } });
+    expect(response.status).toBe(401);
+    expect(response.body).toMatchObject({ error: { code: 'AUTHENTICATION_REQUIRED' } });
   });
 
-  it('refuses before reading the request when creation is disabled', async () => {
-    const app = buildApp({ creationEnabled: false });
+  it('refuses before reading the upload when nobody is signed in', async () => {
+    const response = await request(buildApp()).post('/ascents').field('surface', 'asphalt');
 
-    const response = await request(app).post('/ascents').field('surface', 'asphalt');
+    expect(response.status).toBe(401);
+    expect(response.body).toMatchObject({ error: { code: 'AUTHENTICATION_REQUIRED' } });
+  });
 
-    expect(response.status).toBe(403);
-    expect(response.body).toMatchObject({ error: { code: 'ASCENT_CREATION_DISABLED' } });
+  it('never shows who added an Ascent', async () => {
+    const app = buildApp();
+    const created = await upload(app, gpxTrack(straightNorth(REFERENCE, 1000)));
+    const read = await request(app).get(`/ascents/${created.body.id as string}`);
+
+    for (const body of [created.body, read.body]) {
+      expect(JSON.stringify(body)).not.toContain(VISITOR_A.visitorId);
+      expect(Object.keys(body as object).some((key) => /contributor/i.test(key))).toBe(false);
+    }
   });
 });
 

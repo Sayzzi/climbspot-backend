@@ -29,15 +29,6 @@ export class AscentDipTooLargeError extends DomainError {
   readonly kind = 'invalid';
 }
 
-export class AscentCreationDisabledError extends DomainError {
-  readonly code = 'ASCENT_CREATION_DISABLED';
-  readonly kind = 'forbidden';
-
-  constructor() {
-    super('Creating Ascents is disabled on this server.');
-  }
-}
-
 /** The uploaded file cannot be read as GPX. */
 export class GpxInvalidError extends DomainError {
   readonly code = 'GPX_INVALID';
