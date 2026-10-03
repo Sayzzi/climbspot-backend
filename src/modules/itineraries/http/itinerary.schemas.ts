@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { activities } from '../../../shared/domain/activity.ts';
+import { activities, runningActivities } from '../../../shared/domain/activity.ts';
 import { effortSchema } from '../../../shared/http/effort.ts';
 import { categories } from '../../../shared/domain/survey/category.ts';
 import { reliefs } from '../domain/itinerary.ts';
@@ -121,3 +121,66 @@ export const uphillItinerariesSchema = z
   .meta({ id: 'UphillItineraries' });
 
 export type UphillItineraryResponse = z.infer<typeof uphillItinerarySchema>;
+
+const lineStringSchema = z
+  .object({
+    type: z.literal('LineString'),
+    coordinates: z.array(z.tuple([z.number(), z.number()])),
+  })
+  .meta({ description: 'GeoJSON LineString ([longitude, latitude] pairs).' });
+
+export const hillSessionRequestSchema = z
+  .object({
+    start: positionSchema,
+    radius: z.number().positive().max(25_000).default(10_000).meta({
+      description: 'The Repeats start within this distance of `start`, in metres.',
+    }),
+    repeats: z.number().int().min(2).max(20).meta({ description: 'Number of Repeats.' }),
+    repeatLength: z.number().min(200).max(2000).meta({
+      description: 'Metres; every Repeat is exactly this long.',
+    }),
+    minGradient: gradient('Lowest average Gradient of the Repeat').min(0).max(0.3),
+    maxGradient: gradient('Highest average Gradient of the Repeat').min(0).max(0.3),
+    activity: z.enum(runningActivities).meta({ description: 'A running Activity.' }),
+  })
+  .refine((request) => request.minGradient <= request.maxGradient, {
+    message: 'minGradient must not exceed maxGradient.',
+    path: ['minGradient'],
+  })
+  .meta({ id: 'HillSessionRequest' });
+
+export const hillSessionSchema = z
+  .object({
+    kind: z.literal('session'),
+    exact: itineraryBase.exact,
+    differences: itineraryBase.differences,
+    repeats: z.number().int(),
+    repeat: z
+      .object({
+        path: lineStringSchema,
+        elevationProfile: itineraryBase.elevationProfile,
+        length: metres('Length of one Repeat'),
+        averageGradient: gradient('Average Gradient of the Repeat'),
+        maximumGradient: gradient('Steepest Gradient of the Repeat'),
+        start: pointSchema,
+        top: pointSchema,
+      })
+      .meta({ description: 'The Uphill Itinerary run up for each Repeat.' }),
+    warmUp: z.object({ path: lineStringSchema, length: metres('Length of the Warm-up') }).meta({
+      description: 'From `start` to the foot of the Repeat; the Cool-down is the same way back.',
+    }),
+    totals: z
+      .object({
+        length: metres('Length of the whole session'),
+        heightGained: metres('Every rise over the whole session'),
+        effort: effortSchema,
+      })
+      .meta({ description: 'Warm-up, Repeats and Recoveries, and Cool-down together.' }),
+  })
+  .meta({ id: 'HillSession' });
+
+export const hillSessionsSchema = z
+  .object({ sessions: z.array(hillSessionSchema) })
+  .meta({ id: 'HillSessions' });
+
+export type HillSessionResponse = z.infer<typeof hillSessionSchema>;

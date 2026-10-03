@@ -6,8 +6,13 @@ import {
 import { isRunning, type Activity } from '../../../shared/domain/activity.ts';
 import { toEffortResponse } from '../../../shared/http/effort.ts';
 import { round, roundCoordinate } from '../../../shared/http/rounding.ts';
-import type { LoopItinerary, UphillItinerary } from '../domain/itinerary.ts';
-import type { LoopItineraryResponse, UphillItineraryResponse } from './itinerary.schemas.ts';
+import type { Position } from '../../../shared/domain/position.ts';
+import type { HillSession, LoopItinerary, UphillItinerary } from '../domain/itinerary.ts';
+import type {
+  HillSessionResponse,
+  LoopItineraryResponse,
+  UphillItineraryResponse,
+} from './itinerary.schemas.ts';
 
 const point = ({ position, elevation }: ProfilePoint) => ({
   latitude: roundCoordinate(position.latitude),
@@ -64,5 +69,48 @@ export function toUphillItineraryResponse(
     difficultyScore: measurements.difficultyScore,
     category: measurements.category,
     distanceToStart: round(itinerary.distanceToStart, 1),
+  };
+}
+
+const lineString = (positions: readonly Position[]) => ({
+  type: 'LineString' as const,
+  coordinates: positions.map((position): [number, number] => [
+    roundCoordinate(position.longitude),
+    roundCoordinate(position.latitude),
+  ]),
+});
+
+export function toHillSessionResponse(session: HillSession): HillSessionResponse {
+  const { repeat, measurements } = session;
+  return {
+    kind: 'session',
+    exact: session.exact,
+    differences: session.differences.map((difference) =>
+      difference.kind === 'gradient'
+        ? { ...difference, actual: round(difference.actual, 4) }
+        : difference,
+    ),
+    repeats: session.repeats,
+    repeat: {
+      path: lineString(repeat.path),
+      elevationProfile: repeat.profile.map(({ distance, elevation }) => ({
+        distance: round(distance, 1),
+        elevation: round(elevation, 1),
+      })),
+      length: round(repeat.measurements.length, 1),
+      averageGradient: round(repeat.measurements.averageGradient, 4),
+      maximumGradient: round(repeat.measurements.maximumGradient, 4),
+      start: point(firstPoint(repeat.profile)),
+      top: point(lastPoint(repeat.profile)),
+    },
+    warmUp: {
+      path: lineString(session.warmUp.path),
+      length: round(session.warmUp.profile.at(-1)?.distance ?? 0, 1),
+    },
+    totals: {
+      length: round(measurements.length, 1),
+      heightGained: round(measurements.heightGained, 1),
+      effort: toEffortResponse(measurements),
+    },
   };
 }

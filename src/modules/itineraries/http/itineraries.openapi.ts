@@ -2,6 +2,8 @@ import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 
 import { apiErrorSchema } from '../../../shared/http/api-error.ts';
 import {
+  hillSessionRequestSchema,
+  hillSessionsSchema,
   loopItinerariesSchema,
   loopRequestSchema,
   uphillItinerariesSchema,
@@ -50,6 +52,30 @@ export function registerItinerariesOpenApi(registry: OpenAPIRegistry, basePath: 
       200: {
         description: 'Proposals, possibly none.',
         content: { 'application/json': { schema: uphillItinerariesSchema } },
+      },
+      400: errorResponse('`VALIDATION_FAILED`: the request is invalid.'),
+      503: errorResponse('`ROUTING_UNAVAILABLE`: routing is temporarily unavailable; retry later.'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: `${basePath}/sessions`,
+    operationId: 'planHillSessions',
+    summary: 'Plan Hill Sessions from a point',
+    description:
+      'Up to three Hill Sessions near `start`: Repeats of exactly `repeatLength` within the Gradient range, with a Warm-up from `start` to their foot and the same way back, best first (exact, steady, shortest Warm-up). Running Activities only.',
+    tags: ['Itineraries'],
+    request: {
+      body: {
+        required: true,
+        content: { 'application/json': { schema: hillSessionRequestSchema } },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Sessions, possibly none.',
+        content: { 'application/json': { schema: hillSessionsSchema } },
       },
       400: errorResponse('`VALIDATION_FAILED`: the request is invalid.'),
       503: errorResponse('`ROUTING_UNAVAILABLE`: routing is temporarily unavailable; retry later.'),

@@ -10,8 +10,13 @@ export const activities = [
 export type Activity = (typeof activities)[number];
 
 /** Activities that are running: running effort and times only make sense for them. */
-const runningActivities: readonly Activity[] = ['running', 'trail_running'];
+export const runningActivities = [
+  'running',
+  'trail_running',
+] as const satisfies readonly Activity[];
 
-export function isRunning(activity: Activity): boolean {
-  return runningActivities.includes(activity);
+export type RunningActivity = (typeof runningActivities)[number];
+
+export function isRunning(activity: Activity): activity is RunningActivity {
+  return (runningActivities as readonly Activity[]).includes(activity);
 }

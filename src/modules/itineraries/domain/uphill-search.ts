@@ -1,10 +1,10 @@
 import type { Position } from '../../../shared/domain/position.ts';
 import { reverse, type ElevationProfile } from '../../../shared/domain/survey/elevation-profile.ts';
-import { distanceBetween } from '../../../shared/domain/survey/geodesy.ts';
+import { distanceBetween, interpolate } from '../../../shared/domain/survey/geodesy.ts';
 import { dipAllowance, measure } from '../../../shared/domain/survey/measurements.ts';
 import { LENGTH_TOLERANCE, SAME_ITINERARY_DISTANCE } from './itinerary-rules.ts';
 import type { UphillItinerary, UphillRequest } from './itinerary.ts';
-import { geometryBetween, type SurveyedPath } from './surveyed-path.ts';
+import { cumulativeDistances, geometryBetween, type SurveyedPath } from './surveyed-path.ts';
 
 interface Stretch {
   /** Indices into the profile travelled in `direction`. */
@@ -96,8 +96,7 @@ export function rankUphill(
   request: UphillRequest,
 ): UphillItinerary[] {
   const middle = (request.minGradient + request.maxGradient) / 2;
-  const wall = (itinerary: UphillItinerary) =>
-    Math.round(Math.max(0, itinerary.measurements.maximumGradient - request.maxGradient) * 100);
+  const wall = (itinerary: UphillItinerary) => wallAbove(itinerary, request.maxGradient);
   return [...itineraries].sort(
     (a, b) =>
       Number(b.exact) - Number(a.exact) ||
@@ -106,6 +105,75 @@ export function rankUphill(
         Math.abs(b.measurements.averageGradient - middle) ||
       a.distanceToStart - b.distanceToStart,
   );
+}
+
+/** How far the maximum Gradient goes above the asked range, in whole percents. */
+export function wallAbove(itinerary: UphillItinerary, maxGradient: number): number {
+  return Math.round(Math.max(0, itinerary.measurements.maximumGradient - maxGradient) * 100);
+}
+
+/**
+ * The same Itinerary cut to exactly `length` metres from its start: path, profile and
+ * measurements, and whether its average Gradient is still within the asked range.
+ */
+export function trimmedTo(
+  itinerary: UphillItinerary,
+  length: number,
+  request: UphillRequest,
+): UphillItinerary {
+  const profile = cutProfile(itinerary.profile, length);
+  const path = cutPath(itinerary.path, length);
+  const measurements = measure(profile);
+  const exact = isExact(measurements.averageGradient, request);
+  return {
+    ...itinerary,
+    path,
+    profile,
+    measurements,
+    exact,
+    differences: exact
+      ? []
+      : [
+          {
+            kind: 'gradient',
+            min: request.minGradient,
+            max: request.maxGradient,
+            actual: measurements.averageGradient,
+          },
+        ],
+  };
+}
+
+function cutProfile(profile: ElevationProfile, length: number): ElevationProfile {
+  const kept = profile.filter((point) => point.distance < length);
+  const next = profile.find((point) => point.distance >= length);
+  const previous = kept.at(-1);
+  if (next === undefined || previous === undefined) {
+    return kept;
+  }
+  const fraction = (length - previous.distance) / (next.distance - previous.distance || 1);
+  return [
+    ...kept,
+    {
+      position: interpolate(previous.position, next.position, fraction),
+      distance: length,
+      elevation: previous.elevation + (next.elevation - previous.elevation) * fraction,
+    },
+  ];
+}
+
+function cutPath(path: readonly Position[], length: number): Position[] {
+  const distances = cumulativeDistances(path);
+  const kept = path.filter((_, index) => (distances[index] ?? Infinity) < length);
+  const nextIndex = distances.findIndex((distance) => distance >= length);
+  const previous = kept.at(-1);
+  const next = path[nextIndex];
+  if (next === undefined || previous === undefined) {
+    return kept;
+  }
+  const from = distances[nextIndex - 1] ?? 0;
+  const to = distances[nextIndex] ?? from;
+  return [...kept, interpolate(previous, next, (length - from) / (to - from || 1))];
 }
 
 /** Whether two Itineraries start and end at about the same places. */

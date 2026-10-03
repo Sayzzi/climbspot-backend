@@ -1,4 +1,4 @@
-import type { Activity } from '../../../shared/domain/activity.ts';
+import type { Activity, RunningActivity } from '../../../shared/domain/activity.ts';
 import type { Position } from '../../../shared/domain/position.ts';
 import type { ElevationProfile } from '../../../shared/domain/survey/elevation-profile.ts';
 import type { Measurements } from '../../../shared/domain/survey/measurements.ts';
@@ -58,4 +58,34 @@ export interface UphillRequest {
   readonly minGradient: number;
   readonly maxGradient: number;
   readonly activity: Activity;
+}
+
+export interface HillSessionRequest {
+  readonly start: Position;
+  /** Metres from `start` within which the Repeats must start. */
+  readonly radius: number;
+  readonly repeats: number;
+  /** Metres; every Repeat is exactly this long. */
+  readonly repeatLength: number;
+  /** Average Gradient range of the Repeat, as ratios. */
+  readonly minGradient: number;
+  readonly maxGradient: number;
+  readonly activity: RunningActivity;
+}
+
+/** A Hill Session (see CONTEXT.md): Warm-up, Repeats and Recoveries, Cool-down. */
+export interface HillSession {
+  readonly kind: 'session';
+  readonly repeats: number;
+  /** The Uphill Itinerary run up for each Repeat, exactly the asked length. */
+  readonly repeat: UphillItinerary;
+  /** From the starting point to the foot of the Repeat; the Cool-down is its way back. */
+  readonly warmUp: {
+    readonly path: readonly Position[];
+    readonly profile: ElevationProfile;
+  };
+  /** Measured over the whole session: Warm-up, Repeats and Recoveries, Cool-down. */
+  readonly measurements: Measurements;
+  readonly exact: boolean;
+  readonly differences: readonly Difference[];
 }

@@ -25,3 +25,7 @@ export function askUphill(app: Express, body: Record<string, unknown>) {
 export function askLoops(app: Express, body: Record<string, unknown>) {
   return request(app).post('/itineraries/loops').send(body);
 }
+
+export function askSessions(app: Express, body: Record<string, unknown>) {
+  return request(app).post('/itineraries/sessions').send(body);
+}
