@@ -1,10 +1,19 @@
 import { createApp } from './app.ts';
-import { createAscentsModule, OpenMeteoElevationProvider } from './modules/ascents/index.ts';
-import { createAccountsModule } from './modules/accounts/index.ts';
+import {
+  createAscentsModule,
+  forgetContributor,
+  OpenMeteoElevationProvider,
+} from './modules/ascents/index.ts';
+import {
+  createAccountsModule,
+  SupabaseAccountDirectory,
+  type AccountDirectory,
+} from './modules/accounts/index.ts';
 import { createHealthModule } from './modules/health/index.ts';
 import {
   createItinerariesModule,
   createSavedItinerariesModule,
+  forgetSavedItineraries,
   OpenRouteServiceRoutingProvider,
 } from './modules/itineraries/index.ts';
 import { loadEnv } from './shared/config/env.ts';
@@ -17,13 +26,25 @@ const env = loadEnv();
 const logger = createLogger({ level: env.LOG_LEVEL, pretty: env.NODE_ENV === 'development' });
 const database = createDatabase(env.DATABASE_URL);
 
+// Without the service-role key, deleting an account fails before erasing anything.
+const accountDirectory: AccountDirectory = env.SUPABASE_SERVICE_ROLE_KEY
+  ? new SupabaseAccountDirectory({
+      projectUrl: env.SUPABASE_URL,
+      serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    })
+  : { deleteVisitor: () => Promise.reject(new Error('SUPABASE_SERVICE_ROLE_KEY is not set')) };
+
 const app = createApp({
   logger,
   corsOrigins: env.CORS_ORIGINS,
   identityVerifier: new SupabaseIdentityVerifier({ projectUrl: env.SUPABASE_URL }),
   modules: [
     createHealthModule(),
-    createAccountsModule({ db: database.db }),
+    createAccountsModule({
+      db: database.db,
+      directory: accountDirectory,
+      erasers: [forgetContributor(database.db), forgetSavedItineraries(database.db)],
+    }),
     createSavedItinerariesModule({ db: database.db }),
     createAscentsModule({
       db: database.db,

@@ -85,6 +85,13 @@ export class DrizzleAscentRepository implements AscentRepository {
     });
   }
 
+  async forgetContributor(visitorId: string): Promise<void> {
+    await this.db
+      .update(ascents)
+      .set({ contributorId: null })
+      .where(eq(ascents.contributorId, visitorId));
+  }
+
   async findById(id: string): Promise<Ascent | undefined> {
     const [row] = await this.db.select(ascentColumns).from(ascents).where(eq(ascents.id, id));
     return row && toAscent(row);

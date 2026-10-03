@@ -26,4 +26,6 @@ export interface AscentRepository {
   findById(id: string): Promise<Ascent | undefined>;
   /** Ascents whose Start is within the radius, nearest first. */
   findNearby(criteria: NearbyCriteria): Promise<NearbyAscent[]>;
+  /** Forgets who added the Ascents a Visitor contributed; the Ascents stay. */
+  forgetContributor(visitorId: string): Promise<void>;
 }

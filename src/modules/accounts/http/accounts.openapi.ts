@@ -46,4 +46,22 @@ export function registerAccountsOpenApi(registry: OpenAPIRegistry, basePath: str
       401: errorResponse('`AUTHENTICATION_REQUIRED`: nobody is signed in.'),
     },
   });
+
+  registry.registerPath({
+    method: 'delete',
+    path: basePath,
+    operationId: 'deleteMyAccount',
+    summary: "Delete the signed-in Visitor's account",
+    description:
+      'Deletes their identity, then everything kept about them; the Ascents they added stay, without any link to them.',
+    tags: ['Accounts'],
+    security: bearerAuth,
+    responses: {
+      204: { description: 'Deleted.' },
+      401: errorResponse('`AUTHENTICATION_REQUIRED`: nobody is signed in.'),
+      503: errorResponse(
+        '`ACCOUNT_DELETION_UNAVAILABLE`: the identity could not be deleted; nothing was erased.',
+      ),
+    },
+  });
 }

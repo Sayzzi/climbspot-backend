@@ -43,3 +43,9 @@ export function createAscentsModule({
     },
   };
 }
+
+/** Erases who added Ascents when a Contributor's account is deleted; the Ascents stay. */
+export function forgetContributor(db: Database) {
+  const repository = new DrizzleAscentRepository(db);
+  return { erase: (visitorId: string) => repository.forgetContributor(visitorId) };
+}

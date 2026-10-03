@@ -1,3 +1,4 @@
+import { DomainError } from '../../../shared/domain/domain-error.ts';
 import type { Identity } from '../../../shared/domain/identity.ts';
 
 /** What ClimbSpot keeps about a signed-in Visitor, private to them. */
@@ -26,4 +27,13 @@ export function newAccount(identity: Identity): Account {
     email: identity.email,
     flatPace: undefined,
   };
+}
+
+export class AccountDeletionUnavailableError extends DomainError {
+  readonly code = 'ACCOUNT_DELETION_UNAVAILABLE';
+  readonly kind = 'unavailable';
+
+  constructor(options?: ErrorOptions) {
+    super('The account cannot be deleted right now; nothing was erased.', options);
+  }
 }

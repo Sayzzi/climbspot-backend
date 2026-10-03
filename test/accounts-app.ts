@@ -3,16 +3,49 @@ import { pino } from 'pino';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 
 import { createApp } from '../src/app.ts';
+import type { AccountDirectory } from '../src/modules/accounts/domain/account-directory.ts';
 import { createAccountsModule } from '../src/modules/accounts/index.ts';
-import { createDatabase, type DatabaseConnection } from '../src/shared/infrastructure/database.ts';
+import { createAscentsModule, forgetContributor } from '../src/modules/ascents/index.ts';
+import {
+  createSavedItinerariesModule,
+  forgetSavedItineraries,
+} from '../src/modules/itineraries/index.ts';
+import {
+  createDatabase,
+  type Database,
+  type DatabaseConnection,
+} from '../src/shared/infrastructure/database.ts';
 import { createTestDatabase, type TestDatabase } from './database.ts';
 import { fakeIdentityVerifier } from './identity.ts';
+import { uniformGradient } from './terrain.ts';
+
+/** An account directory recording the accounts it deleted, or failing like Supabase down. */
+export function fakeAccountDirectory({ failing = false } = {}) {
+  const deleted: string[] = [];
+  const directory: AccountDirectory = {
+    deleteVisitor: (visitorId) => {
+      if (failing) {
+        return Promise.reject(new Error('Supabase is down'));
+      }
+      deleted.push(visitorId);
+      return Promise.resolve();
+    },
+  };
+  return { directory, deleted };
+}
+
+export interface AccountsApp {
+  (options?: { directory?: AccountDirectory }): Express;
+  /** The test database, to look at what the API never shows. */
+  readonly db: () => Database;
+}
 
 /**
- * Gives the calling test file its own migrated database, emptied before each test,
- * and a factory for the HTTP application wired with the Accounts module.
+ * Gives the calling test file its own migrated database, emptied before each test, and a
+ * factory for the HTTP application with Accounts, the Ascents and Saved Itineraries
+ * their deletion reaches.
  */
-export function useAccountsApp(): () => Express {
+export function useAccountsApp(): AccountsApp {
   let testDatabase: TestDatabase;
   let connection: DatabaseConnection;
 
@@ -28,11 +61,20 @@ export function useAccountsApp(): () => Express {
 
   beforeEach(() => testDatabase.truncate());
 
-  return () =>
+  const build = ({ directory = fakeAccountDirectory().directory } = {}) =>
     createApp({
       logger: pino({ level: 'silent' }),
       corsOrigins: [],
       identityVerifier: fakeIdentityVerifier,
-      modules: [createAccountsModule({ db: connection.db })],
+      modules: [
+        createAccountsModule({
+          db: connection.db,
+          directory,
+          erasers: [forgetContributor(connection.db), forgetSavedItineraries(connection.db)],
+        }),
+        createAscentsModule({ db: connection.db, elevationProvider: uniformGradient(0.08) }),
+        createSavedItinerariesModule({ db: connection.db }),
+      ],
     });
+  return Object.assign(build, { db: () => connection.db });
 }

@@ -20,6 +20,10 @@ export class DrizzleAccountRepository implements AccountRepository {
     );
   }
 
+  async delete(visitorId: string): Promise<void> {
+    await this.db.delete(accounts).where(eq(accounts.visitorId, visitorId));
+  }
+
   async save(account: Account): Promise<void> {
     const values = {
       displayName: account.displayName,
