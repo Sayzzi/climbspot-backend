@@ -9,6 +9,7 @@ import {
 import { activities } from '../../../shared/domain/activity.ts';
 import { MAXIMUM_GRADIENT_STRETCH } from '../../../shared/domain/survey/survey-rules.ts';
 import { categories } from '../../../shared/domain/survey/category.ts';
+import { effortSchema } from '../../../shared/http/effort.ts';
 import { surfaces } from '../domain/surface.ts';
 
 const metres = (description: string) =>
@@ -22,19 +23,6 @@ const surfaceSchema = z.enum(surfaces).meta({ id: 'Surface' });
 const activitySchema = z.enum(activities).meta({ id: 'Activity' });
 
 const categorySchema = z.enum(categories).meta({ id: 'Category' });
-
-/** Shared with Itineraries: how hard a path is to run (see CONTEXT.md). */
-export const effortSchema = z
-  .object({
-    kmEffort: z.number().meta({
-      description: 'Length in km plus one per 100 m of Height Gained, rounded to 0.1.',
-      example: 4.8,
-    }),
-    flatEquivalentDistance: metres(
-      'Distance on the flat costing a runner as much as the path (Minetti, descents at best 10 % faster)',
-    ),
-  })
-  .meta({ id: 'Effort', description: 'How hard the path is to run; only given for running.' });
 
 export const ascentPointSchema = z
   .object({

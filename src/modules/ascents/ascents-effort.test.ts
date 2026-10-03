@@ -2,30 +2,11 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
 import { uploadGpx, useAscentsApp } from '../../../test/ascents-app.ts';
+import { flatEquivalent } from '../../../test/effort.ts';
 import { gpxTrack } from '../../../test/gpx.ts';
 import { REFERENCE, straightNorth, terrainRisingNorth } from '../../../test/terrain.ts';
 
 const buildApp = useAscentsApp();
-
-/** Minetti's energy cost of running at Gradient `i`, J/kg/m (validity ±45 %). */
-const minetti = (i: number) =>
-  155.4 * i ** 5 - 30.4 * i ** 4 - 43.3 * i ** 3 + 46.3 * i ** 2 + 19.5 * i + 3.6;
-
-/** The Flat-Equivalent Distance of a profile, computed by hand from its stretches. */
-function flatEquivalent(
-  profile: readonly { distance: number; elevation: number }[],
-  descentFloor: number,
-): number {
-  let total = 0;
-  for (const [index, to] of profile.entries()) {
-    const from = profile[index - 1];
-    if (from === undefined) continue;
-    const length = to.distance - from.distance;
-    const gradient = Math.max(-0.45, Math.min(0.45, (to.elevation - from.elevation) / length));
-    total += length * Math.max(descentFloor, minetti(gradient) / minetti(0));
-  }
-  return total;
-}
 
 describe('Effort of an Ascent', () => {
   it('measures the Km-Effort and the Flat-Equivalent Distance on a uniform Gradient', async () => {

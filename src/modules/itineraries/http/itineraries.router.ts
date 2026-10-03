@@ -24,13 +24,21 @@ export function createItinerariesRouter({
   router.post('/loops', async (req, res) => {
     const request = loopRequestSchema.parse(req.body);
     const itineraries = await generateLoops.execute(request);
-    res.json({ itineraries: itineraries.map(toLoopItineraryResponse) });
+    res.json({
+      itineraries: itineraries.map((itinerary) =>
+        toLoopItineraryResponse(itinerary, request.activity),
+      ),
+    });
   });
 
   router.post('/uphill', async (req, res) => {
     const request = uphillRequestSchema.parse(req.body);
     const itineraries = await findUphillItineraries.execute(request);
-    res.json({ itineraries: itineraries.map(toUphillItineraryResponse) });
+    res.json({
+      itineraries: itineraries.map((itinerary) =>
+        toUphillItineraryResponse(itinerary, request.activity),
+      ),
+    });
   });
 
   return router;

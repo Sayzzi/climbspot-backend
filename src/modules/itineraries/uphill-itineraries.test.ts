@@ -285,6 +285,33 @@ describe('POST /itineraries/uphill', () => {
     expect(calls.routeTowards).toHaveLength(1);
   });
 
+  it('gives the running effort of Uphill Itineraries asked for running, none for cycling', async () => {
+    const routing = () =>
+      fakeRouting({
+        elevationAt: planar(0.04),
+        roundTrip: ({ start, length, variant }) =>
+          variant === 1 ? outAndBack(start, 0, length) : undefined,
+        routeTowards: () => undefined,
+      }).provider;
+
+    const [running] = (await askUphill(itinerariesApp(routing()), ask())).body.itineraries as {
+      length: number;
+      heightGained: number;
+      effort?: { kmEffort: number; flatEquivalentDistance: number };
+    }[];
+    const [cycling] = itineraries(
+      (await askUphill(itinerariesApp(routing()), ask({ activity: 'road_cycling' }))).body,
+    );
+
+    expect(running?.effort?.kmEffort).toBeCloseTo(
+      (running?.length ?? 0) / 1000 + (running?.heightGained ?? 0) / 100,
+      1,
+    );
+    expect(running?.effort?.flatEquivalentDistance).toBeGreaterThan(running?.length ?? Infinity);
+    expect(cycling).toBeDefined();
+    expect(cycling).not.toHaveProperty('effort');
+  });
+
   it('answers an empty list when no way can be found', async () => {
     const { provider } = fakeRouting({
       elevationAt: planar(0.04),
@@ -336,5 +363,9 @@ describe('POST /itineraries/uphill', () => {
     const response = await request(itinerariesApp(provider)).get('/openapi.json');
 
     expect(response.body).toMatchObject({ paths: { '/itineraries/uphill': { post: {} } } });
+    const { UphillItinerary, LoopItinerary } = response.body.components.schemas;
+    for (const schema of [UphillItinerary, LoopItinerary]) {
+      expect(schema.properties.effort).toEqual({ $ref: '#/components/schemas/Effort' });
+    }
   });
 });

@@ -2,6 +2,7 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
 import { askLoops, itinerariesApp } from '../../../test/itineraries-app.ts';
+import { flatEquivalent } from '../../../test/effort.ts';
 import { fakeRouting, legs, offset } from '../../../test/routing.ts';
 import { METRES_PER_DEGREE_OF_LATITUDE, REFERENCE } from '../../../test/terrain.ts';
 import type { Position } from '../../shared/domain/position.ts';
@@ -131,6 +132,37 @@ describe('POST /itineraries/loops', () => {
     );
     expect(closest).toBeLessThan(300);
     expect(calls.routeThrough.length + calls.routeTowards.length).toBeLessThanOrEqual(40);
+  });
+
+  it('gives the running effort of Loops asked for running, its descents counted with the floor', async () => {
+    const { provider } = fakeRouting({ elevationAt: risingNorth(0.06) });
+
+    const [loop] = (await askLoops(itinerariesApp(provider), ask({ relief: 'rolling' }))).body
+      .itineraries as (LoopBody & {
+      effort: { kmEffort: number; flatEquivalentDistance: number };
+    })[];
+
+    expect(loop?.effort.kmEffort).toBeCloseTo(
+      (loop?.length ?? 0) / 1000 + (loop?.heightGained ?? 0) / 100,
+      1,
+    );
+    expect(loop?.effort.flatEquivalentDistance).toBeCloseTo(
+      flatEquivalent(loop?.elevationProfile ?? [], 0.9),
+      0,
+    );
+  });
+
+  it('gives no running effort to Loops asked for cycling', async () => {
+    const { provider } = fakeRouting({ elevationAt: risingNorth(0.06) });
+
+    const found = loops(
+      (await askLoops(itinerariesApp(provider), ask({ activity: 'road_cycling' }))).body,
+    );
+
+    expect(found.length).toBeGreaterThan(0);
+    for (const loop of found) {
+      expect(loop).not.toHaveProperty('effort');
+    }
   });
 
   it('stops asking once three exact Loops are found', async () => {

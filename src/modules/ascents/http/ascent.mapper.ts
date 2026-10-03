@@ -1,6 +1,5 @@
 import { isRunning } from '../../../shared/domain/activity.ts';
-import { kmEffort } from '../../../shared/domain/survey/effort.ts';
-import type { Measurements } from '../../../shared/domain/survey/measurements.ts';
+import { toEffortResponse } from '../../../shared/http/effort.ts';
 import { activitiesFor } from '../domain/activity.ts';
 import type { NearbyAscent } from '../domain/ascent-repository.ts';
 import { summarize, type Ascent, type AscentPoint, type AscentSummary } from '../domain/ascent.ts';
@@ -23,14 +22,6 @@ const point = ({ position, elevation }: AscentPoint) => ({
   longitude: coordinate(position.longitude),
   elevation: round(elevation, 1),
 });
-
-/** How hard a path is to run, as the API gives it; shared with Itineraries. */
-export function toEffortResponse({ length, heightGained, flatEquivalentDistance }: Measurements) {
-  return {
-    kmEffort: round(kmEffort(length, heightGained), 1),
-    flatEquivalentDistance: round(flatEquivalentDistance, 1),
-  };
-}
 
 export function toAscentSummaryResponse(ascent: AscentSummary): AscentSummaryResponse {
   const { measurements } = ascent;

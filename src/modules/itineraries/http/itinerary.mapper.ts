@@ -3,6 +3,8 @@ import {
   lastPoint,
   type ProfilePoint,
 } from '../../../shared/domain/survey/elevation-profile.ts';
+import { isRunning, type Activity } from '../../../shared/domain/activity.ts';
+import { toEffortResponse } from '../../../shared/http/effort.ts';
 import { round, roundCoordinate } from '../../../shared/http/rounding.ts';
 import type { LoopItinerary, UphillItinerary } from '../domain/itinerary.ts';
 import type { LoopItineraryResponse, UphillItineraryResponse } from './itinerary.schemas.ts';
@@ -13,8 +15,8 @@ const point = ({ position, elevation }: ProfilePoint) => ({
   elevation: round(elevation, 1),
 });
 
-/** Fields every kind of Itinerary shares. */
-function common(itinerary: UphillItinerary | LoopItinerary) {
+/** Fields every kind of Itinerary shares; the running effort only for running Activities. */
+function common(itinerary: UphillItinerary | LoopItinerary, activity: Activity) {
   return {
     exact: itinerary.exact,
     differences: itinerary.differences.map((difference) =>
@@ -35,18 +37,25 @@ function common(itinerary: UphillItinerary | LoopItinerary) {
     })),
     length: round(itinerary.measurements.length, 1),
     heightGained: round(itinerary.heightGained, 1),
+    ...(isRunning(activity) && { effort: toEffortResponse(itinerary.measurements) }),
   };
 }
 
-export function toLoopItineraryResponse(itinerary: LoopItinerary): LoopItineraryResponse {
-  return { kind: 'loop', ...common(itinerary), relief: itinerary.relief };
+export function toLoopItineraryResponse(
+  itinerary: LoopItinerary,
+  activity: Activity,
+): LoopItineraryResponse {
+  return { kind: 'loop', ...common(itinerary, activity), relief: itinerary.relief };
 }
 
-export function toUphillItineraryResponse(itinerary: UphillItinerary): UphillItineraryResponse {
+export function toUphillItineraryResponse(
+  itinerary: UphillItinerary,
+  activity: Activity,
+): UphillItineraryResponse {
   const { measurements } = itinerary;
   return {
     kind: 'uphill',
-    ...common(itinerary),
+    ...common(itinerary, activity),
     start: point(firstPoint(itinerary.profile)),
     top: point(lastPoint(itinerary.profile)),
     elevationGain: round(measurements.elevationGain, 1),

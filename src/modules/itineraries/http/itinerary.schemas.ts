@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { activities } from '../../../shared/domain/activity.ts';
+import { effortSchema } from '../../../shared/http/effort.ts';
 import { categories } from '../../../shared/domain/survey/category.ts';
 import { reliefs } from '../domain/itinerary.ts';
 
@@ -53,6 +54,7 @@ const itineraryBase = {
   ),
   length: metres('Length along the path'),
   heightGained: metres('Sum of every rise along the path'),
+  effort: effortSchema.optional(),
 };
 
 export const loopItinerarySchema = z
