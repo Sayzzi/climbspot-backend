@@ -38,7 +38,8 @@ export function geometryBetween(path: SurveyedPath, from: number, to: number): P
   return [positionAlong(path, from), ...inner, positionAlong(path, to)];
 }
 
-function cumulativeDistances(geometry: readonly Position[]): number[] {
+/** Distance of each position along the path from its first one, in metres. */
+export function cumulativeDistances(geometry: readonly Position[]): number[] {
   let total = 0;
   return geometry.map((position, index) => {
     const previous = geometry[index - 1];

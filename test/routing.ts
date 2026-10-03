@@ -66,22 +66,10 @@ export interface FakeRoutingOptions {
 export function fakeRouting(options: FakeRoutingOptions) {
   const calls = { roundTrip: [] as RoundTripRequest[], routeThrough: [] as RouteThroughRequest[] };
 
-  const toRoutedPath = (positions: Position[] | undefined): RoutedPath | undefined => {
-    if (positions === undefined) {
-      return undefined;
-    }
-    let length = 0;
-    for (const [index, position] of positions.entries()) {
-      const previous = positions[index - 1];
-      if (previous !== undefined) {
-        length += distanceBetween(previous, position);
-      }
-    }
-    return {
-      length,
+  const toRoutedPath = (positions: Position[] | undefined): RoutedPath | undefined =>
+    positions && {
       points: positions.map((position) => ({ position, elevation: options.elevationAt(position) })),
     };
-  };
 
   const provider: RoutingProvider = {
     roundTrip: (start, length, activity, variant) => {

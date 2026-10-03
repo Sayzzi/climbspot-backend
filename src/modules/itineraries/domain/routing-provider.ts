@@ -8,11 +8,12 @@ export interface RoutedPoint {
   readonly elevation: number;
 }
 
-/** A path worked out over the road and trail network. */
+/**
+ * A path worked out over the road and trail network. Its length is measured on its
+ * points, never taken from the routing service's own figure.
+ */
 export interface RoutedPath {
   readonly points: readonly RoutedPoint[];
-  /** Metres along the path. */
-  readonly length: number;
 }
 
 /**
@@ -22,7 +23,10 @@ export interface RoutedPath {
  * @throws {RoutingUnavailableError} when routing cannot be done right now.
  */
 export interface RoutingProvider {
-  /** The way through these positions, in order. */
+  /**
+   * The way through these positions, in order. It begins and ends on ways next to the
+   * first and last positions; the positions in between only steer it.
+   */
   routeThrough(positions: readonly Position[], activity: Activity): Promise<RoutedPath | undefined>;
   /** A round trip of about `length` metres from `start`; each `variant` gives another one. */
   roundTrip(

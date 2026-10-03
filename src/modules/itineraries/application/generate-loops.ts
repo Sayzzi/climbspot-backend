@@ -41,17 +41,23 @@ export class GenerateLoops {
           loopWaypoints(request.start, bearing, radius),
           request.activity,
         );
-        if (routed === undefined || routed.length <= 0) {
+        if (routed === undefined || routed.points.length < 2) {
           break;
         }
-        if (fitsLength(routed.length, request.distance)) {
-          const loop = toLoop(survey(routed), request);
+        // Judged on the path as measured, which is what the Visitor gets, never on
+        // the routing service's own figure.
+        const loop = toLoop(survey(routed), request);
+        const { length } = loop.measurements;
+        if (length <= 0) {
+          break;
+        }
+        if (fitsLength(length, request.distance)) {
           if (!found.some((other) => isSameLoop(other, loop))) {
             found.push(loop);
           }
           break;
         }
-        radius *= (request.distance * LOOP_LENGTH_TARGET) / routed.length;
+        radius *= (request.distance * LOOP_LENGTH_TARGET) / length;
       }
 
       if (found.filter((loop) => loop.exact).length >= MAXIMUM_PROPOSALS) {

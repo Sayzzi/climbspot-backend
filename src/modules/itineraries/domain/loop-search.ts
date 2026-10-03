@@ -9,7 +9,7 @@ import {
   SAME_ITINERARY_DISTANCE,
 } from './itinerary-rules.ts';
 import type { LoopItinerary, LoopRequest, Relief } from './itinerary.ts';
-import { geometryBetween, type SurveyedPath } from './surveyed-path.ts';
+import { cumulativeDistances, geometryBetween, type SurveyedPath } from './surveyed-path.ts';
 
 const METRES_PER_DEGREE_OF_LATITUDE = 111_195;
 
@@ -89,7 +89,7 @@ export function isSameLoop(a: LoopItinerary, b: LoopItinerary): boolean {
     const surveyed = {
       profile: loop.profile,
       geometry: loop.path,
-      distances: cumulative(loop.path),
+      distances: cumulativeDistances(loop.path),
     };
     const length = surveyed.distances.at(-1) ?? 0;
     return [length / 3, (2 * length) / 3].map((at) => geometryBetween(surveyed, at, at)[0]);
@@ -102,16 +102,5 @@ export function isSameLoop(a: LoopItinerary, b: LoopItinerary): boolean {
       other !== undefined &&
       distanceBetween(mark, other) < SAME_ITINERARY_DISTANCE
     );
-  });
-}
-
-function cumulative(path: readonly Position[]): number[] {
-  let total = 0;
-  return path.map((position, index) => {
-    const previous = path[index - 1];
-    if (previous !== undefined) {
-      total += distanceBetween(previous, position);
-    }
-    return total;
   });
 }

@@ -13,7 +13,7 @@ interface Sent {
   readonly body: Record<string, unknown>;
 }
 
-/** A fake OpenRouteService answering a straight two-point route of 1,234 m. */
+/** A fake OpenRouteService answering a straight two-point route. */
 function fakeOpenRouteService(sent: Sent[] = [], answer?: () => Response): typeof fetch {
   return async (input, init) => {
     const request = new Request(input, init);
@@ -33,7 +33,6 @@ function fakeOpenRouteService(sent: Sent[] = [], answer?: () => Response): typeo
                 [6.01, 45.01, 260],
               ],
             },
-            properties: { summary: { distance: 1234 } },
           },
         ],
       })
@@ -61,7 +60,6 @@ describe('OpenRouteServiceRoutingProvider', () => {
     );
 
     expect(routed).toEqual({
-      length: 1234,
       points: [
         { position: { latitude: 45, longitude: 6 }, elevation: 200 },
         { position: { latitude: 45.01, longitude: 6.01 }, elevation: 260 },
@@ -76,6 +74,23 @@ describe('OpenRouteServiceRoutingProvider', () => {
       ],
       elevation: true,
     });
+  });
+
+  it('begins and ends next to the first and last positions, only steered by the others', async () => {
+    const sent: Sent[] = [];
+    const provider = new OpenRouteServiceRoutingProvider({
+      apiKey,
+      baseUrl,
+      fetch: fakeOpenRouteService(sent),
+    });
+    const start = { latitude: 45, longitude: 6 };
+
+    await provider.routeThrough(
+      [start, { latitude: 45.02, longitude: 6 }, { latitude: 45.02, longitude: 6.02 }, start],
+      'running',
+    );
+
+    expect(sent[0]?.body).toMatchObject({ radiuses: [300, 2000, 2000, 300] });
   });
 
   it.each<[Activity, string]>([
@@ -161,7 +176,6 @@ describe('OpenRouteServiceRoutingProvider', () => {
                       [6, 45.01, 2],
                     ],
                   },
-                  properties: { summary: { distance: 10 } },
                 },
               ],
             });
@@ -174,8 +188,26 @@ describe('OpenRouteServiceRoutingProvider', () => {
 
     await expect(
       provider.roundTrip({ latitude: 45, longitude: 6 }, 5000, 'running', 1),
-    ).resolves.toMatchObject({ length: 10 });
+    ).resolves.toMatchObject({ points: [{ elevation: 1 }, { elevation: 2 }] });
     expect(waits).toEqual([1000]);
+  });
+
+  it('does not retry once the daily quota is spent', async () => {
+    let calls = 0;
+    const provider = new OpenRouteServiceRoutingProvider({
+      apiKey,
+      baseUrl,
+      fetch: fakeOpenRouteService([], () => {
+        calls += 1;
+        return new Response('', { status: 429, headers: { 'x-ratelimit-remaining': '0' } });
+      }),
+      sleep: noWait,
+    });
+
+    await expect(
+      provider.roundTrip({ latitude: 45, longitude: 6 }, 5000, 'running', 1),
+    ).rejects.toBeInstanceOf(RoutingUnavailableError);
+    expect(calls).toBe(1);
   });
 
   const failures: [string, () => Response][] = [

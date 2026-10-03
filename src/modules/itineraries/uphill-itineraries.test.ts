@@ -112,7 +112,7 @@ describe('POST /itineraries/uphill', () => {
   });
 
   it('leaves out stretches that lose too much height in Dips', async () => {
-    // Climbs at 6 %, but drops 40 m between 500 and 600 m north.
+    // Rises at 6 %, but drops 40 m between 500 and 600 m north.
     const dipping = (p: Position) => {
       const north = northOfReference(p);
       if (north <= 500) return 200 + 0.06 * north;

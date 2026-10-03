@@ -19,8 +19,12 @@ const profiles: Record<Activity, string> = {
 
 const DEFAULT_BASE_URL = 'https://api.openrouteservice.org';
 const DEFAULT_TIMEOUT_MS = 15_000;
-/** Waypoints may be this far from a way, in metres, and still be snapped onto it. */
-const SNAP_RADIUS = 2_000;
+/**
+ * How far from a way, in metres, a position may be and still be snapped onto it. The
+ * ends stay close to where the Visitor placed them; waypoints in between only steer.
+ */
+const END_SNAP_RADIUS = 300;
+const WAYPOINT_SNAP_RADIUS = 2_000;
 /** Points a round trip goes through: more points, rounder loops. */
 const ROUND_TRIP_POINTS = 4;
 
@@ -32,12 +36,12 @@ const responseSchema = z.object({
     .array(
       z.object({
         geometry: z.object({ coordinates: z.array(z.tuple([z.number(), z.number(), z.number()])) }),
-        properties: z.object({ summary: z.object({ distance: z.number() }) }),
       }),
     )
     .min(1),
 });
 
+/** Rate limited for the minute: worth retrying after a wait. */
 class RateLimitedError extends Error {}
 
 export interface OpenRouteServiceRoutingProviderOptions {
@@ -71,7 +75,9 @@ export class OpenRouteServiceRoutingProvider implements RoutingProvider {
   ): Promise<RoutedPath | undefined> {
     return this.request(activity, {
       coordinates: positions.map(toCoordinates),
-      radiuses: positions.map(() => SNAP_RADIUS),
+      radiuses: positions.map((_, index) =>
+        index === 0 || index === positions.length - 1 ? END_SNAP_RADIUS : WAYPOINT_SNAP_RADIUS,
+      ),
     });
   }
 
@@ -120,6 +126,10 @@ export class OpenRouteServiceRoutingProvider implements RoutingProvider {
     );
 
     if (response.status === 429) {
+      // A spent daily quota will not come back by waiting.
+      if (response.headers.get('x-ratelimit-remaining') === '0') {
+        throw new Error('OpenRouteService daily quota is spent');
+      }
       throw new RateLimitedError('OpenRouteService answered HTTP 429');
     }
     // No routable way near the positions: an answer, not a failure.
@@ -135,7 +145,6 @@ export class OpenRouteServiceRoutingProvider implements RoutingProvider {
       throw new Error('OpenRouteService answered no route');
     }
     return {
-      length: feature.properties.summary.distance,
       points: feature.geometry.coordinates.map(([longitude, latitude, elevation]) => ({
         position: { latitude, longitude },
         elevation,
