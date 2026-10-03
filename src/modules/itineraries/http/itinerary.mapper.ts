@@ -36,7 +36,7 @@ function common(itinerary: UphillItinerary | LoopItinerary, activity: Activity) 
       elevation: round(elevation, 1),
     })),
     length: round(itinerary.measurements.length, 1),
-    heightGained: round(itinerary.heightGained, 1),
+    heightGained: round(itinerary.measurements.heightGained, 1),
     ...(isRunning(activity) && { effort: toEffortResponse(itinerary.measurements) }),
   };
 }

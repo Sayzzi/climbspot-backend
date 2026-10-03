@@ -1,7 +1,7 @@
 import type { Position } from '../../../shared/domain/position.ts';
 import { reverse, type ElevationProfile } from '../../../shared/domain/survey/elevation-profile.ts';
 import { distanceBetween } from '../../../shared/domain/survey/geodesy.ts';
-import { dipAllowance, heightGained, measure } from '../../../shared/domain/survey/measurements.ts';
+import { dipAllowance, measure } from '../../../shared/domain/survey/measurements.ts';
 import { LENGTH_TOLERANCE, SAME_ITINERARY_DISTANCE } from './itinerary-rules.ts';
 import type { UphillItinerary, UphillRequest } from './itinerary.ts';
 import { geometryBetween, type SurveyedPath } from './surveyed-path.ts';
@@ -183,7 +183,6 @@ function toItinerary(
     path: geometry,
     profile: rebased,
     measurements: measure(rebased),
-    heightGained: heightGained(rebased),
     distanceToStart: stretch.distanceToStart,
     exact,
     differences: exact

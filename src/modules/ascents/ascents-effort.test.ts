@@ -52,6 +52,31 @@ describe('Effort of an Ascent', () => {
     );
   });
 
+  it('counts a descent at the floor, by hand', async () => {
+    // 4 km up at 8 %, 1 km down at 6 % (60 m, within the Dip allowance), 4 km up at 8 %.
+    const terrain = terrainRisingNorth((north) =>
+      north <= 4000
+        ? 200 + 0.08 * north
+        : north <= 5000
+          ? 520 - 0.06 * (north - 4000)
+          : 460 + 0.08 * (north - 5000),
+    );
+
+    const response = await uploadGpx(
+      buildApp({ terrain }),
+      gpxTrack(straightNorth(REFERENCE, 9000, 91)),
+    );
+
+    expect(response.status).toBe(201);
+    // By hand: 8,000 m × C(8 %)/C(0) = 8,000 × 1.5093 = 12,074 m, plus 1,000 m of descent at
+    // the 0.9 floor: 12,974 m. Minetti alone would count the descent 0.72: 12,798 m.
+    // Smoothing blurs the two bends by a few tens of metres, far less than the floor's 176 m.
+    const { flatEquivalentDistance } = (
+      response.body as { effort: { flatEquivalentDistance: number } }
+    ).effort;
+    expect(Math.abs(flatEquivalentDistance - 12_974)).toBeLessThan(75);
+  });
+
   it('is given in nearby searches too', async () => {
     const app = buildApp();
     const created = await uploadGpx(app, gpxTrack(straightNorth(REFERENCE, 1000)));

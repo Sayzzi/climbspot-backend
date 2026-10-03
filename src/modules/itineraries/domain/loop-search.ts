@@ -1,6 +1,6 @@
 import type { Position } from '../../../shared/domain/position.ts';
 import { distanceBetween, offset } from '../../../shared/domain/survey/geodesy.ts';
-import { heightGained, measure } from '../../../shared/domain/survey/measurements.ts';
+import { measure, type Measurements } from '../../../shared/domain/survey/measurements.ts';
 import {
   HILLY_ABOVE,
   LENGTH_TOLERANCE,
@@ -101,17 +101,19 @@ function distanceToBand(heightGainedPerKm: number, relief: Relief): number {
   }
 }
 
+/** Height Gained per kilometre, what the Relief is judged on. */
+const heightGainedPerKm = ({ heightGained, length }: Measurements) =>
+  heightGained / (length / 1000);
+
 export function toLoop(path: SurveyedPath, request: LoopRequest): LoopItinerary {
   const measurements = measure(path.profile);
-  const gained = heightGained(path.profile);
-  const relief = reliefOf(gained / (measurements.length / 1000));
+  const relief = reliefOf(heightGainedPerKm(measurements));
   const exact = relief === request.relief;
   return {
     kind: 'loop',
     path: path.geometry,
     profile: path.profile,
     measurements,
-    heightGained: gained,
     relief,
     exact,
     differences: exact ? [] : [{ kind: 'relief', wanted: request.relief, actual: relief }],
@@ -121,7 +123,7 @@ export function toLoop(path: SurveyedPath, request: LoopRequest): LoopItinerary 
 /** Matching Relief first, then Height Gained closest to the asked band. */
 export function rankLoops(loops: readonly LoopItinerary[], request: LoopRequest): LoopItinerary[] {
   const gap = (loop: LoopItinerary) =>
-    distanceToBand(loop.heightGained / (loop.measurements.length / 1000), request.relief);
+    distanceToBand(heightGainedPerKm(loop.measurements), request.relief);
   return [...loops].sort((a, b) => Number(b.exact) - Number(a.exact) || gap(a) - gap(b));
 }
 

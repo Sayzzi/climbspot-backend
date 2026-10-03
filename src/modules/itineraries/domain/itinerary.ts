@@ -24,7 +24,6 @@ interface ItineraryBase {
   /** Samples every SAMPLING_SPACING metres, distances from the beginning. */
   readonly profile: ElevationProfile;
   readonly measurements: Measurements;
-  readonly heightGained: number;
   /** True when it matches the request; otherwise `differences` say how it does not. */
   readonly exact: boolean;
   readonly differences: readonly Difference[];

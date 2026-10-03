@@ -1,6 +1,5 @@
-import { isRunning } from '../../../shared/domain/activity.ts';
 import { toEffortResponse } from '../../../shared/http/effort.ts';
-import { activitiesFor } from '../domain/activity.ts';
+import { activitiesFor, canBeRun } from '../domain/activity.ts';
 import type { NearbyAscent } from '../domain/ascent-repository.ts';
 import { summarize, type Ascent, type AscentPoint, type AscentSummary } from '../domain/ascent.ts';
 import type {
@@ -25,13 +24,12 @@ const point = ({ position, elevation }: AscentPoint) => ({
 
 export function toAscentSummaryResponse(ascent: AscentSummary): AscentSummaryResponse {
   const { measurements } = ascent;
-  const activities = activitiesFor(ascent.surface);
 
   return {
     id: ascent.id,
     name: ascent.name,
     surface: ascent.surface,
-    activities: [...activities],
+    activities: [...activitiesFor(ascent.surface)],
     start: point(ascent.start),
     top: point(ascent.top),
     length: round(measurements.length, 1),
@@ -41,7 +39,7 @@ export function toAscentSummaryResponse(ascent: AscentSummary): AscentSummaryRes
     maximumGradient: round(measurements.maximumGradient, 4),
     difficultyScore: measurements.difficultyScore,
     category: measurements.category,
-    ...(activities.some(isRunning) && { effort: toEffortResponse(measurements) }),
+    ...(canBeRun(ascent.surface) && { effort: toEffortResponse(measurements) }),
     createdAt: ascent.createdAt.toISOString(),
   };
 }

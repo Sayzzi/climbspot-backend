@@ -1,4 +1,4 @@
-import type { Activity } from '../../../shared/domain/activity.ts';
+import { isRunning, type Activity } from '../../../shared/domain/activity.ts';
 import { surfaces, type Surface } from './surface.ts';
 
 /** The single source of truth linking Surfaces to Activities (ADR 0007). */
@@ -17,4 +17,9 @@ export function surfacesAllowing(wanted: readonly Activity[]): Surface[] {
   return surfaces.filter((surface) =>
     activitiesFor(surface).some((activity) => wanted.includes(activity)),
   );
+}
+
+/** Whether an Ascent of this Surface can be run: only those get a running effort. */
+export function canBeRun(surface: Surface): boolean {
+  return activitiesFor(surface).some(isRunning);
 }
