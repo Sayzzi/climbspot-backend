@@ -76,6 +76,26 @@ _Avoid_: Round trip, Circuit, Boucle
 An Itinerary that goes up from one point to another, as close as possible to the average Gradient the Visitor asked for and never shorter than the length they asked for. It is not an Ascent unless it is catalogued as one.
 _Avoid_: Climb, Suggested Ascent, Montée
 
+**Hill Session**:
+A running workout built around one Uphill Itinerary: a Warm-up to its foot, several Repeats of it, each followed by a Recovery, and a Cool-down back to the start.
+_Avoid_: Hill repeats, Workout, Intervals, Séance
+
+**Repeat**:
+One run up the Uphill Itinerary of a Hill Session, exactly the length the Visitor asked for.
+_Avoid_: Rep, Interval, Climb
+
+**Recovery**:
+The easy jog back down the Repeat's way to its foot, before the next Repeat.
+_Avoid_: Rest, Descent
+
+**Warm-up**:
+The way from the Hill Session's starting point to the foot of its Repeats, however long it is.
+_Avoid_: Approach
+
+**Cool-down**:
+The way back from the foot of the Repeats to the Hill Session's starting point.
+_Avoid_: Return
+
 **Relief**:
 How much a Loop goes up and down overall, judged by its Height Gained per kilometre: flat, rolling or hilly.
 _Avoid_: Terrain, Profile, Difficulty
