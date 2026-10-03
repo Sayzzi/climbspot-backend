@@ -118,6 +118,23 @@ describe('OpenRouteServiceRoutingProvider', () => {
     });
   });
 
+  it('sends no key to a self-hosted instance', async () => {
+    const sent: Sent[] = [];
+    const provider = new OpenRouteServiceRoutingProvider({
+      baseUrl: 'http://localhost:8080/ors',
+      fetch: fakeOpenRouteService(sent),
+    });
+
+    await provider.routeTowards(
+      { latitude: 45, longitude: 6 },
+      { latitude: 45.07, longitude: 6 },
+      'running',
+    );
+
+    expect(sent[0]?.url).toBe('http://localhost:8080/ors/v2/directions/foot-walking/geojson');
+    expect(sent[0]?.authorization).toBeNull();
+  });
+
   it.each<[Activity, string]>([
     ['running', 'foot-walking'],
     ['trail_running', 'foot-hiking'],

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const HOSTED_OPEN_ROUTE_SERVICE = 'https://api.openrouteservice.org';
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -18,10 +20,16 @@ const envSchema = z
       ),
     DATABASE_URL: z.url(),
     ELEVATION_API_URL: z.url().default('https://api.open-meteo.com/v1/elevation'),
-    /** OpenRouteService API key, used to plan Itineraries (ADR 0008). */
-    ORS_API_KEY: z.string().min(1),
+    /** OpenRouteService used to plan Itineraries (ADR 0008): hosted, or self-hosted. */
+    ORS_URL: z.url().default(HOSTED_OPEN_ROUTE_SERVICE),
+    /** Key for the hosted OpenRouteService; a self-hosted one needs none. */
+    ORS_API_KEY: z.string().min(1).optional(),
     /** Temporary guard until Contributors are authenticated; off in production by default. */
     ASCENT_CREATION_ENABLED: z.stringbool().optional(),
+  })
+  .refine((env) => env.ORS_URL !== HOSTED_OPEN_ROUTE_SERVICE || env.ORS_API_KEY !== undefined, {
+    path: ['ORS_API_KEY'],
+    message: 'The hosted OpenRouteService needs an API key.',
   })
   .transform(({ ASCENT_CREATION_ENABLED, ...env }) => ({
     ...env,

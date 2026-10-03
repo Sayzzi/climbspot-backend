@@ -16,12 +16,20 @@ describe('loadEnv', () => {
       DATABASE_URL: databaseUrl,
       ELEVATION_API_URL: 'https://api.open-meteo.com/v1/elevation',
       ASCENT_CREATION_ENABLED: true,
+      ORS_URL: 'https://api.openrouteservice.org',
       ORS_API_KEY: 'ors-key',
     });
   });
 
-  it('requires an OpenRouteService API key', () => {
+  it('requires an API key for the hosted OpenRouteService', () => {
     expect(() => loadEnv({ DATABASE_URL: databaseUrl })).toThrow(/ORS_API_KEY/);
+  });
+
+  it('accepts a self-hosted OpenRouteService without a key', () => {
+    const env = loadEnv({ DATABASE_URL: databaseUrl, ORS_URL: 'http://localhost:8080/ors' });
+
+    expect(env.ORS_URL).toBe('http://localhost:8080/ors');
+    expect(env.ORS_API_KEY).toBeUndefined();
   });
 
   it('disables Ascent creation in production unless explicitly enabled', () => {

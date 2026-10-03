@@ -1,0 +1,54 @@
+# Self-hosted OpenRouteService for local development (ADR 0008): no key, no quota.
+# Prepare the map first with ./prepare-map.sh, then `docker compose up -d`.
+# The first start builds the routing graphs (several minutes); later starts reuse them.
+services:
+  ors:
+    image: openrouteservice/openrouteservice:v10.0.1
+    container_name: climbspot-routing
+    ports:
+      - '8080:8082'
+    volumes:
+      - ./ors-docker/files:/home/ors/files
+      - ./ors-docker/graphs:/home/ors/graphs
+      - ./ors-docker/elevation_cache:/home/ors/elevation_cache
+      - ./ors-docker/logs:/home/ors/logs
+    environment:
+      REBUILD_GRAPHS: 'False'
+      # Rule of thumb from OpenRouteService: map size × profiles × 2.
+      XMS: 1g
+      XMX: 5g
+      # Configured by properties only: the container replaces a mounted config file
+      # with its example on first start.
+      ors.engine.profile_default.build.source_file: /home/ors/files/climbspot.osm.pbf
+      ors.engine.profile_default.graph_path: /home/ors/graphs
+      ors.engine.elevation.provider: multi
+      ors.engine.elevation.cache_path: /home/ors/elevation_cache
+      ors.engine.profiles.driving-car.enabled: 'false'
+      # The profiles of our Activities, with elevations. Loops reach 120 km and their
+      # waypoints are snapped within 2 km.
+      ors.engine.profiles.foot-walking.enabled: 'true'
+      ors.engine.profiles.foot-walking.build.elevation: 'true'
+      ors.engine.profiles.foot-walking.service.maximum_distance: 150000
+      ors.engine.profiles.foot-walking.service.maximum_snapping_radius: 5000
+      ors.engine.profiles.foot-hiking.enabled: 'true'
+      ors.engine.profiles.foot-hiking.build.elevation: 'true'
+      ors.engine.profiles.foot-hiking.service.maximum_distance: 150000
+      ors.engine.profiles.foot-hiking.service.maximum_snapping_radius: 5000
+      ors.engine.profiles.cycling-road.enabled: 'true'
+      ors.engine.profiles.cycling-road.build.elevation: 'true'
+      ors.engine.profiles.cycling-road.service.maximum_distance: 150000
+      ors.engine.profiles.cycling-road.service.maximum_snapping_radius: 5000
+      ors.engine.profiles.cycling-regular.enabled: 'true'
+      ors.engine.profiles.cycling-regular.build.elevation: 'true'
+      ors.engine.profiles.cycling-regular.service.maximum_distance: 150000
+      ors.engine.profiles.cycling-regular.service.maximum_snapping_radius: 5000
+      ors.engine.profiles.cycling-mountain.enabled: 'true'
+      ors.engine.profiles.cycling-mountain.build.elevation: 'true'
+      ors.engine.profiles.cycling-mountain.service.maximum_distance: 150000
+      ors.engine.profiles.cycling-mountain.service.maximum_snapping_radius: 5000
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8082/ors/v2/health || exit 1
+      start_period: 30m
+      interval: 15s
+      timeout: 3s
+      retries: 3

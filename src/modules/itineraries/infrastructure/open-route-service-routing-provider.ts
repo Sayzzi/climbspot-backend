@@ -45,7 +45,8 @@ const responseSchema = z.object({
 class RateLimitedError extends Error {}
 
 export interface OpenRouteServiceRoutingProviderOptions {
-  readonly apiKey: string;
+  /** Needed by the hosted service only. */
+  readonly apiKey?: string;
   readonly baseUrl?: string;
   readonly timeoutMs?: number;
   readonly fetch?: typeof fetch;
@@ -55,7 +56,7 @@ export interface OpenRouteServiceRoutingProviderOptions {
 
 /** Routing by the OpenRouteService API, elevations included. */
 export class OpenRouteServiceRoutingProvider implements RoutingProvider {
-  private readonly apiKey: string;
+  private readonly apiKey: string | undefined;
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
   private readonly fetch: typeof fetch;
@@ -130,7 +131,10 @@ export class OpenRouteServiceRoutingProvider implements RoutingProvider {
       `${this.baseUrl}/v2/directions/${profiles[activity]}/geojson`,
       {
         method: 'POST',
-        headers: { Authorization: this.apiKey, 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.apiKey !== undefined && { Authorization: this.apiKey }),
+        },
         body: JSON.stringify({ ...body, elevation: true }),
         signal: AbortSignal.timeout(this.timeoutMs),
       },

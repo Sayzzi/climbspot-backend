@@ -53,3 +53,7 @@ Desktop.ini
 *.pid.lock
 .tmp/
 tmp/
+
+# Self-hosted routing: downloaded map extracts, built graphs, elevation tiles
+routing/sources/
+routing/ors-docker/

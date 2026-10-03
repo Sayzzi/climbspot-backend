@@ -33,6 +33,19 @@ pnpm db:migrate        # apply migrations (enables PostGIS on first run)
 
 Tests need **Docker** running: the suite starts a PostGIS container once per run (`test/global-setup.ts`) and gives each test file its own freshly migrated database, created from a template (`test/database.ts`).
 
+### Routing for Itineraries
+
+Itineraries are routed by OpenRouteService ([ADR 0008](./docs/adr/0008-itineraries-routed-by-openrouteservice.md)). The hosted API allows about 200 directions a day, a few planning requests; for development, run it locally instead, on the areas ClimbSpot is tried on (Lille–Tournai and Annecy–Chamonix):
+
+```bash
+brew install osmium-tool
+routing/prepare-map.sh                       # downloads and cuts the map (~1.2 GB of sources)
+docker compose -f routing/compose.yml up -d  # first start builds the graphs, see `docker logs -f climbspot-routing`
+echo 'ORS_URL=http://localhost:8080/ors' >> .env
+```
+
+Requests outside those areas find no way. To cover another area, add it to `routing/prepare-map.sh`, rerun it and restart the container with `REBUILD_GRAPHS=True`.
+
 ## Scripts
 
 | Script                                          | Purpose                                        |

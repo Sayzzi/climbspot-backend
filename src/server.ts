@@ -25,7 +25,10 @@ const app = createApp({
       creationEnabled: env.ASCENT_CREATION_ENABLED,
     }),
     createItinerariesModule({
-      routingProvider: new OpenRouteServiceRoutingProvider({ apiKey: env.ORS_API_KEY }),
+      routingProvider: new OpenRouteServiceRoutingProvider({
+        baseUrl: env.ORS_URL,
+        ...(env.ORS_API_KEY !== undefined && { apiKey: env.ORS_API_KEY }),
+      }),
     }),
   ],
 });
