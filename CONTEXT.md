@@ -80,6 +80,24 @@ _Avoid_: Climb, Suggested Ascent, Montée
 How much a Loop goes up and down overall, judged by its Height Gained per kilometre: flat, rolling or hilly.
 _Avoid_: Terrain, Profile, Difficulty
 
+### Effort
+
+**Km-Effort**:
+A running effort in kilometres: the length plus one kilometre for every 100 m of Height Gained. The trail-running standard; only given for running Activities.
+_Avoid_: Effort points, Equivalent kilometres
+
+**Flat Pace**:
+The pace a Visitor runs on the flat, which they state themselves. Estimated Times are worked out from it.
+_Avoid_: Speed, Target pace
+
+**Flat-Equivalent Distance**:
+The distance on the flat that costs a runner as much as a path, Gradient by Gradient. Descents count as slightly easier than the flat, never much easier.
+_Avoid_: Grade-adjusted distance, Effort distance
+
+**Estimated Time**:
+How long a Visitor would take to run a path: its Flat-Equivalent Distance at their Flat Pace. Never shown without a Flat Pace.
+_Avoid_: Duration, ETA, Predicted time
+
 ### People
 
 **Visitor**:
