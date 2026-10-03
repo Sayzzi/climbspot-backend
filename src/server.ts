@@ -4,6 +4,7 @@ import { createAccountsModule } from './modules/accounts/index.ts';
 import { createHealthModule } from './modules/health/index.ts';
 import {
   createItinerariesModule,
+  createSavedItinerariesModule,
   OpenRouteServiceRoutingProvider,
 } from './modules/itineraries/index.ts';
 import { loadEnv } from './shared/config/env.ts';
@@ -23,6 +24,7 @@ const app = createApp({
   modules: [
     createHealthModule(),
     createAccountsModule({ db: database.db }),
+    createSavedItinerariesModule({ db: database.db }),
     createAscentsModule({
       db: database.db,
       elevationProvider: new OpenMeteoElevationProvider({ baseUrl: env.ELEVATION_API_URL }),

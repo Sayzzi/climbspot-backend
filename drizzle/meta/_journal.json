@@ -57,6 +57,13 @@
       "when": 1791040997914,
       "tag": "0007_record_contributors",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791041161841,
+      "tag": "0008_keep_saved_itineraries",
+      "breakpoints": true
     }
   ]
 }
