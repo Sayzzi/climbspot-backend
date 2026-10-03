@@ -28,6 +28,15 @@ export interface RoutingProvider {
    * first and last positions; the positions in between only steer it.
    */
   routeThrough(positions: readonly Position[], activity: Activity): Promise<RoutedPath | undefined>;
+  /**
+   * A way from next to `start` heading for `destination`, which only gives the
+   * direction: the way ends wherever it gets near it.
+   */
+  routeTowards(
+    start: Position,
+    destination: Position,
+    activity: Activity,
+  ): Promise<RoutedPath | undefined>;
   /** A round trip of about `length` metres from `start`; each `variant` gives another one. */
   roundTrip(
     start: Position,

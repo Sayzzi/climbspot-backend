@@ -51,6 +51,12 @@ export interface RouteThroughRequest {
   readonly activity: Activity;
 }
 
+export interface RouteTowardsRequest {
+  readonly start: Position;
+  readonly destination: Position;
+  readonly activity: Activity;
+}
+
 export interface FakeRoutingOptions {
   /** Elevation of the fake terrain at a position, in metres. */
   readonly elevationAt: (position: Position) => number;
@@ -58,13 +64,34 @@ export interface FakeRoutingOptions {
   readonly roundTrip?: (request: RoundTripRequest) => Position[] | undefined;
   /** Geometry through positions, or undefined when no way is found. Defaults to straight lines. */
   readonly routeThrough?: (request: RouteThroughRequest) => Position[] | undefined;
+  /** Geometry heading for a destination, or undefined when no way is found. Defaults to a straight line. */
+  readonly routeTowards?: (request: RouteTowardsRequest) => Position[] | undefined;
   /** Makes every call fail like an unreachable routing service. */
   readonly failWith?: Error;
 }
 
+/** Straight lines through positions, a point every 10 m or so. */
+function straight(positions: readonly Position[]): Position[] {
+  return positions.flatMap((position, index) => {
+    const next = positions[index + 1];
+    if (next === undefined) {
+      return [position];
+    }
+    const steps = Math.max(1, Math.round(distanceBetween(position, next) / 10));
+    return Array.from({ length: steps }, (_, step) => ({
+      latitude: position.latitude + ((next.latitude - position.latitude) * step) / steps,
+      longitude: position.longitude + ((next.longitude - position.longitude) * step) / steps,
+    }));
+  });
+}
+
 /** A RoutingProvider over a fake terrain, recording every call. */
 export function fakeRouting(options: FakeRoutingOptions) {
-  const calls = { roundTrip: [] as RoundTripRequest[], routeThrough: [] as RouteThroughRequest[] };
+  const calls = {
+    roundTrip: [] as RoundTripRequest[],
+    routeThrough: [] as RouteThroughRequest[],
+    routeTowards: [] as RouteTowardsRequest[],
+  };
 
   const toRoutedPath = (positions: Position[] | undefined): RoutedPath | undefined =>
     positions && {
@@ -86,21 +113,26 @@ export function fakeRouting(options: FakeRoutingOptions) {
       if (options.failWith) {
         return Promise.reject(options.failWith);
       }
-      const geometry = options.routeThrough
-        ? options.routeThrough({ positions, activity })
-        : positions.flatMap((position, index) => {
-            const next = positions[index + 1];
-            if (next === undefined) {
-              return [position];
-            }
-            const steps = Math.max(1, Math.round(distanceBetween(position, next) / 10));
-            return Array.from({ length: steps }, (_, step) => ({
-              latitude: position.latitude + ((next.latitude - position.latitude) * step) / steps,
-              longitude:
-                position.longitude + ((next.longitude - position.longitude) * step) / steps,
-            }));
-          });
-      return Promise.resolve(toRoutedPath(geometry));
+      return Promise.resolve(
+        toRoutedPath(
+          options.routeThrough
+            ? options.routeThrough({ positions, activity })
+            : straight(positions),
+        ),
+      );
+    },
+    routeTowards: (start, destination, activity) => {
+      calls.routeTowards.push({ start, destination, activity });
+      if (options.failWith) {
+        return Promise.reject(options.failWith);
+      }
+      return Promise.resolve(
+        toRoutedPath(
+          options.routeTowards
+            ? options.routeTowards({ start, destination, activity })
+            : straight([start, destination]),
+        ),
+      );
     },
   };
 

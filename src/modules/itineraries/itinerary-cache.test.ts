@@ -37,7 +37,7 @@ function routing() {
 }
 
 const callsMade = (calls: ReturnType<typeof routing>['calls']) =>
-  calls.roundTrip.length + calls.routeThrough.length;
+  calls.roundTrip.length + calls.routeThrough.length + calls.routeTowards.length;
 
 describe('Itinerary cache', () => {
   it('answers an identical Uphill request again without routing', async () => {
@@ -126,6 +126,9 @@ describe('Itinerary cache', () => {
         down ? Promise.reject(new RoutingUnavailableError('down')) : working.roundTrip(...args),
       routeThrough: (...args) =>
         down ? Promise.reject(new RoutingUnavailableError('down')) : working.routeThrough(...args),
+
+      routeTowards: (...args) =>
+        down ? Promise.reject(new RoutingUnavailableError('down')) : working.routeTowards(...args),
     };
     const app = itinerariesApp(flaky);
     expect((await askUphill(app, uphill())).status).toBe(503);

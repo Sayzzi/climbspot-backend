@@ -93,6 +93,31 @@ describe('OpenRouteServiceRoutingProvider', () => {
     expect(sent[0]?.body).toMatchObject({ radiuses: [300, 2000, 2000, 300] });
   });
 
+  it('heads for a destination that only gives the direction', async () => {
+    const sent: Sent[] = [];
+    const provider = new OpenRouteServiceRoutingProvider({
+      apiKey,
+      baseUrl,
+      fetch: fakeOpenRouteService(sent),
+    });
+
+    await provider.routeTowards(
+      { latitude: 45, longitude: 6 },
+      { latitude: 45.07, longitude: 6 },
+      'road_cycling',
+    );
+
+    expect(sent[0]?.url).toBe(`${baseUrl}/v2/directions/cycling-road/geojson`);
+    expect(sent[0]?.body).toMatchObject({
+      coordinates: [
+        [6, 45],
+        [6, 45.07],
+      ],
+      radiuses: [300, 2000],
+      elevation: true,
+    });
+  });
+
   it.each<[Activity, string]>([
     ['running', 'foot-walking'],
     ['trail_running', 'foot-hiking'],

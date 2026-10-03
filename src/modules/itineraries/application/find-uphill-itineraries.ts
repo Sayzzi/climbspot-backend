@@ -51,8 +51,9 @@ export class FindUphillItineraries {
     );
     const spokes = UPHILL_SPOKE_BEARINGS.map(
       (bearing) => () =>
-        this.routing.routeThrough(
-          [request.start, offset(request.start, bearing, request.radius * UPHILL_SPOKE_REACH)],
+        this.routing.routeTowards(
+          request.start,
+          offset(request.start, bearing, request.radius * UPHILL_SPOKE_REACH),
           request.activity,
         ),
     );

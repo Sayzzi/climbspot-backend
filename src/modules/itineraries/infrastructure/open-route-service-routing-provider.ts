@@ -81,6 +81,17 @@ export class OpenRouteServiceRoutingProvider implements RoutingProvider {
     });
   }
 
+  routeTowards(
+    start: Position,
+    destination: Position,
+    activity: Activity,
+  ): Promise<RoutedPath | undefined> {
+    return this.request(activity, {
+      coordinates: [toCoordinates(start), toCoordinates(destination)],
+      radiuses: [END_SNAP_RADIUS, WAYPOINT_SNAP_RADIUS],
+    });
+  }
+
   roundTrip(
     start: Position,
     length: number,
