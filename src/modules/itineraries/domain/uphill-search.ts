@@ -20,13 +20,27 @@ interface Stretch {
   readonly distanceToStart: number;
 }
 
+/** Lengths a stretch may have, in metres. */
+export interface StretchLengths {
+  readonly shortest: number;
+  readonly longest: number;
+}
+
+/** An Uphill Itinerary's lengths: never shorter than asked, at most 20 % longer. */
+export const uphillLengths = (length: number): StretchLengths => ({
+  shortest: length,
+  longest: length * (1 + LENGTH_TOLERANCE),
+});
+
 /**
- * The best stretch of a surveyed path going up as asked: length within 100–120 % of
- * the request, start within the radius, passing the Dip rule, in either direction.
+ * The best stretch of a surveyed path going up as asked: length within `lengths`
+ * (by default 100–120 % of the request), start within the radius, passing the Dip rule,
+ * in either direction.
  */
 export function bestUphillStretch(
   path: SurveyedPath,
   request: UphillRequest,
+  lengths: StretchLengths = uphillLengths(request.length),
 ): UphillItinerary | undefined {
   let best: Stretch | undefined;
 
@@ -44,8 +58,8 @@ export function bestUphillStretch(
         const to = profile[last];
         if (to === undefined) break;
         const length = to.distance - from.distance;
-        if (length > request.length * (1 + LENGTH_TOLERANCE)) break;
-        if (length < request.length) continue;
+        if (length > lengths.longest) break;
+        if (length < lengths.shortest) continue;
 
         const gain = to.elevation - from.elevation;
         const loss = (lost[last] ?? 0) - (lost[first] ?? 0);

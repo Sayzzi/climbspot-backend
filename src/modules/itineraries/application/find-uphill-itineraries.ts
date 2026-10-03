@@ -1,16 +1,9 @@
-import { offset } from '../../../shared/domain/survey/geodesy.ts';
-import {
-  MAXIMUM_PROPOSALS,
-  ROUTING_CALL_BUDGET,
-  UPHILL_ROUND_TRIP_FACTOR,
-  UPHILL_ROUND_TRIPS,
-  UPHILL_SPOKE_BEARINGS,
-  UPHILL_SPOKE_REACH,
-} from '../domain/itinerary-rules.ts';
+import { MAXIMUM_PROPOSALS, ROUTING_CALL_BUDGET } from '../domain/itinerary-rules.ts';
 import type { UphillItinerary, UphillRequest } from '../domain/itinerary.ts';
-import type { RoutedPath, RoutingProvider } from '../domain/routing-provider.ts';
+import type { RoutingProvider } from '../domain/routing-provider.ts';
 import { survey } from '../domain/surveyed-path.ts';
 import { bestUphillStretch, isSameItinerary, rankUphill } from '../domain/uphill-search.ts';
+import { uphillExplorations } from './uphill-explorations.ts';
 
 /**
  * Finds Uphill Itineraries near a point: explores a few round trips around it, then
@@ -23,7 +16,7 @@ export class FindUphillItineraries {
   async execute(request: UphillRequest): Promise<UphillItinerary[]> {
     const found: UphillItinerary[] = [];
 
-    for (const explore of this.explorations(request).slice(0, ROUTING_CALL_BUDGET)) {
+    for (const explore of uphillExplorations(this.routing, request).slice(0, ROUTING_CALL_BUDGET)) {
       const routed = await explore();
       const stretch = routed && bestUphillStretch(survey(routed), request);
       if (stretch !== undefined) {
@@ -35,29 +28,6 @@ export class FindUphillItineraries {
     }
 
     return rankUphill(found, request).slice(0, MAXIMUM_PROPOSALS);
-  }
-
-  /** Routing calls to try, in order, each worth one call of the budget. */
-  private explorations(request: UphillRequest): (() => Promise<RoutedPath | undefined>)[] {
-    const roundTrips = Array.from(
-      { length: UPHILL_ROUND_TRIPS },
-      (_, index) => () =>
-        this.routing.roundTrip(
-          request.start,
-          request.length * UPHILL_ROUND_TRIP_FACTOR,
-          request.activity,
-          index + 1,
-        ),
-    );
-    const spokes = UPHILL_SPOKE_BEARINGS.map(
-      (bearing) => () =>
-        this.routing.routeTowards(
-          request.start,
-          offset(request.start, bearing, request.radius * UPHILL_SPOKE_REACH),
-          request.activity,
-        ),
-    );
-    return [...roundTrips, ...spokes];
   }
 }
 
