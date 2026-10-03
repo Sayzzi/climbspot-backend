@@ -33,3 +33,16 @@ export const MAXIMUM_GRADIENT_STRETCH = 500;
  */
 export const DIP_ALLOWANCE = 10;
 export const DIP_ALLOWANCE_RATIO = 0.1;
+
+/**
+ * Running effort follows Minetti's energy cost of running, valid for Gradients within
+ * this limit; steeper ones are clamped to it.
+ */
+export const EFFORT_GRADIENT_LIMIT = 0.45;
+
+/**
+ * A descent costs at least this share of the flat, so it counts at best 10 % faster:
+ * Minetti's model assumes runners let go downhill, which few do on steep or technical
+ * ground. To calibrate on real runs.
+ */
+export const DESCENT_COST_FLOOR = 0.9;

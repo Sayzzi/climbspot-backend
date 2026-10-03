@@ -1,3 +1,6 @@
+import { isRunning } from '../../../shared/domain/activity.ts';
+import { kmEffort } from '../../../shared/domain/survey/effort.ts';
+import type { Measurements } from '../../../shared/domain/survey/measurements.ts';
 import { activitiesFor } from '../domain/activity.ts';
 import type { NearbyAscent } from '../domain/ascent-repository.ts';
 import { summarize, type Ascent, type AscentPoint, type AscentSummary } from '../domain/ascent.ts';
@@ -21,22 +24,33 @@ const point = ({ position, elevation }: AscentPoint) => ({
   elevation: round(elevation, 1),
 });
 
+/** How hard a path is to run, as the API gives it; shared with Itineraries. */
+export function toEffortResponse({ length, heightGained, flatEquivalentDistance }: Measurements) {
+  return {
+    kmEffort: round(kmEffort(length, heightGained), 1),
+    flatEquivalentDistance: round(flatEquivalentDistance, 1),
+  };
+}
+
 export function toAscentSummaryResponse(ascent: AscentSummary): AscentSummaryResponse {
   const { measurements } = ascent;
+  const activities = activitiesFor(ascent.surface);
 
   return {
     id: ascent.id,
     name: ascent.name,
     surface: ascent.surface,
-    activities: [...activitiesFor(ascent.surface)],
+    activities: [...activities],
     start: point(ascent.start),
     top: point(ascent.top),
     length: round(measurements.length, 1),
     elevationGain: round(measurements.elevationGain, 1),
+    heightGained: round(measurements.heightGained, 1),
     averageGradient: round(measurements.averageGradient, 4),
     maximumGradient: round(measurements.maximumGradient, 4),
     difficultyScore: measurements.difficultyScore,
     category: measurements.category,
+    ...(activities.some(isRunning) && { effort: toEffortResponse(measurements) }),
     createdAt: ascent.createdAt.toISOString(),
   };
 }

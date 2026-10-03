@@ -21,10 +21,12 @@ const pointFrom = ({ longitude, latitude }: Position) =>
 const measurementColumns = {
   length: ascents.length,
   elevationGain: ascents.elevationGain,
+  heightGained: ascents.heightGained,
   averageGradient: ascents.averageGradient,
   maximumGradient: ascents.maximumGradient,
   difficultyScore: ascents.difficultyScore,
   category: ascents.category,
+  flatEquivalentDistance: ascents.flatEquivalentDistance,
 };
 
 const summaryColumns = {

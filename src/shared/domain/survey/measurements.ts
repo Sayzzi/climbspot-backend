@@ -1,4 +1,5 @@
 import { categoryFor, type Category } from './category.ts';
+import { flatEquivalentDistance } from './effort.ts';
 import { firstPoint, lastPoint, type ElevationProfile } from './elevation-profile.ts';
 import { DIP_ALLOWANCE, DIP_ALLOWANCE_RATIO, MAXIMUM_GRADIENT_STRETCH } from './survey-rules.ts';
 
@@ -8,6 +9,8 @@ export interface Measurements {
   readonly length: number;
   /** Last elevation minus first elevation, in metres. */
   readonly elevationGain: number;
+  /** Every rise along the path, in metres (see CONTEXT.md). */
+  readonly heightGained: number;
   /** Ratio: 0.08 means 8 %. */
   readonly averageGradient: number;
   /** Ratio, over the steepest stretch of at least MAXIMUM_GRADIENT_STRETCH metres. */
@@ -15,6 +18,8 @@ export interface Measurements {
   /** Length in metres × average Gradient in percent, rounded to an integer (ADR 0006). */
   readonly difficultyScore: number;
   readonly category: Category;
+  /** Metres on the flat costing a runner as much as the path (see CONTEXT.md). */
+  readonly flatEquivalentDistance: number;
 }
 
 export function measure(profile: ElevationProfile): Measurements {
@@ -29,10 +34,12 @@ export function measure(profile: ElevationProfile): Measurements {
   return {
     length,
     elevationGain,
+    heightGained: heightGained(profile),
     averageGradient,
     maximumGradient: Math.max(averageGradient, steepestStretch(profile)),
     difficultyScore,
     category: categoryFor(difficultyScore),
+    flatEquivalentDistance: flatEquivalentDistance(profile),
   };
 }
 

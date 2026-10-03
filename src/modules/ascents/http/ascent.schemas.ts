@@ -23,6 +23,19 @@ const activitySchema = z.enum(activities).meta({ id: 'Activity' });
 
 const categorySchema = z.enum(categories).meta({ id: 'Category' });
 
+/** Shared with Itineraries: how hard a path is to run (see CONTEXT.md). */
+export const effortSchema = z
+  .object({
+    kmEffort: z.number().meta({
+      description: 'Length in km plus one per 100 m of Height Gained, rounded to 0.1.',
+      example: 4.8,
+    }),
+    flatEquivalentDistance: metres(
+      'Distance on the flat costing a runner as much as the path (Minetti, descents at best 10 % faster)',
+    ),
+  })
+  .meta({ id: 'Effort', description: 'How hard the path is to run; only given for running.' });
+
 export const ascentPointSchema = z
   .object({
     latitude: z.number().min(-90).max(90),
@@ -41,6 +54,7 @@ export const ascentSummarySchema = z
     top: ascentPointSchema,
     length: metres('Length along the path'),
     elevationGain: metres('Top elevation minus Start elevation'),
+    heightGained: metres('Every rise along the path, Dips included'),
     averageGradient: gradient('Average Gradient'),
     maximumGradient: gradient(
       `Steepest Gradient over at least ${String(MAXIMUM_GRADIENT_STRETCH)} m`,
@@ -49,6 +63,7 @@ export const ascentSummarySchema = z
       .number()
       .meta({ description: 'Length in metres × average Gradient in percent.' }),
     category: categorySchema,
+    effort: effortSchema.optional(),
     createdAt: z.iso.datetime(),
   })
   .meta({ id: 'AscentSummary' });
