@@ -4,7 +4,7 @@ Itineraries (Loops and Uphill Itineraries) are worked out over the road and trai
 
 ## Consequences
 
-- The free key allows about 200 directions a day, and planning one Itinerary request costs 6 to 10 calls. Each request therefore has a call budget, and identical requests are answered from a cache. This is enough to build and test, not to launch publicly.
+- The free key allows about 200 directions a day. Each request has a call budget, and identical requests are answered from a cache. Since the update below, the budget is sized for a self-hosted engine (up to 40 calls when Loops must look further for the asked Relief), so the hosted key now only suits a few requests a day.
 - Before going public we must choose between hosting a routing engine (OpenRouteService or GraphHopper on an OpenStreetMap extract, roughly 8–16 GB of memory for France), a paid plan, or strict per-Visitor limits. Switching only needs a new `RoutingProvider` implementation.
 - OpenRouteService's own round trips do not honour the asked length, so Loops are built by routing through waypoints instead.
 

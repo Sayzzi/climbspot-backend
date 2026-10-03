@@ -4,6 +4,9 @@ import { heightGained, measure } from '../../../shared/domain/survey/measurement
 import {
   HILLY_ABOVE,
   LENGTH_TOLERANCE,
+  LOOP_HIGH_POINT_RISE,
+  LOOP_HIGH_POINT_SPACING,
+  LOOP_HIGH_POINTS,
   LOOP_WINDING_FACTOR,
   ROLLING_FROM,
   SAME_ITINERARY_DISTANCE,
@@ -20,9 +23,61 @@ export const initialLoopRadius = (distance: number) =>
  * whose centre lies `radius` away towards `bearing`, then back to the start.
  */
 export function loopWaypoints(start: Position, bearing: number, radius: number): Position[] {
-  const centre = offset(start, bearing, radius);
-  const around = [-90, 0, 90].map((turn) => offset(centre, bearing + turn, radius));
-  return [start, ...around, start];
+  return stretchedLoopWaypoints(start, bearing, 2 * radius, radius);
+}
+
+/**
+ * Positions to route through for a Loop reaching `reach` metres towards `bearing`:
+ * out on one side, `width` metres from the axis halfway, and back on the other.
+ */
+export function stretchedLoopWaypoints(
+  start: Position,
+  bearing: number,
+  reach: number,
+  width: number,
+): Position[] {
+  const halfway = offset(start, bearing, reach / 2);
+  return [
+    start,
+    offset(halfway, bearing - 90, width),
+    offset(start, bearing, reach),
+    offset(halfway, bearing + 90, width),
+    start,
+  ];
+}
+
+/**
+ * The highest points of surveyed paths within `reach` of the start, worth steering a
+ * Loop to: well above the start, and apart from each other.
+ */
+export function highPoints(
+  paths: readonly SurveyedPath[],
+  start: Position,
+  reach: number,
+): Position[] {
+  const base = paths[0]?.profile[0]?.elevation;
+  if (base === undefined) {
+    return [];
+  }
+  const candidates = paths
+    .flatMap((path) => path.profile)
+    .filter(
+      (point) =>
+        point.elevation >= base + LOOP_HIGH_POINT_RISE &&
+        distanceBetween(start, point.position) <= reach,
+    )
+    .sort((a, b) => b.elevation - a.elevation);
+
+  const chosen: Position[] = [];
+  for (const { position } of candidates) {
+    if (chosen.length === LOOP_HIGH_POINTS) {
+      break;
+    }
+    if (chosen.every((other) => distanceBetween(other, position) >= LOOP_HIGH_POINT_SPACING)) {
+      chosen.push(position);
+    }
+  }
+  return chosen;
 }
 
 export const fitsLength = (length: number, asked: number) =>

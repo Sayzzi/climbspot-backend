@@ -9,8 +9,12 @@ export const LENGTH_TOLERANCE = 0.2;
 /** Proposals answered for one request. */
 export const MAXIMUM_PROPOSALS = 3;
 
-/** Routing calls one planning request may make. */
-export const ROUTING_CALL_BUDGET = 10;
+/**
+ * Routing calls one planning request may make. Sized for a self-hosted routing
+ * engine, where a call takes milliseconds (ADR 0008); the hosted API's daily quota
+ * would only allow a few such requests.
+ */
+export const ROUTING_CALL_BUDGET = 40;
 
 /** Round trips explored around the point first when looking for an Uphill Itinerary. */
 export const UPHILL_ROUND_TRIPS = 2;
@@ -43,6 +47,25 @@ export const LOOP_WINDING_FACTOR = 1.25;
 
 /** Rescaled Loops aim this much above the asked distance, inside the tolerance. */
 export const LOOP_LENGTH_TARGET = 1.1;
+
+/**
+ * When the Loops around the point lack the asked Relief, ways heading out towards
+ * these bearings (degrees) survey the terrain a Loop could reach, as a share of the
+ * asked distance: going there and back must still fit.
+ */
+export const LOOP_SURVEY_BEARINGS = [0, 45, 90, 135, 180, 225, 270, 315] as const;
+export const LOOP_SURVEY_REACH = 0.45;
+
+/**
+ * Then Loops are stretched out to the highest points found: at most this many, this
+ * far apart (metres), and this much higher than the point (metres) to be worth it.
+ */
+export const LOOP_HIGH_POINTS = 4;
+export const LOOP_HIGH_POINT_SPACING = 1000;
+export const LOOP_HIGH_POINT_RISE = 20;
+
+/** A stretched Loop is never narrower than this share of its reach. */
+export const LOOP_MINIMUM_WIDTH = 0.1;
 
 /** Height Gained per kilometre separating flat from rolling, and rolling from hilly. */
 export const ROLLING_FROM = 10;

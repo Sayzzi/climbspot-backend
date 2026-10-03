@@ -2,7 +2,7 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
 import { askLoops, itinerariesApp } from '../../../test/itineraries-app.ts';
-import { fakeRouting, legs } from '../../../test/routing.ts';
+import { fakeRouting, legs, offset } from '../../../test/routing.ts';
 import { METRES_PER_DEGREE_OF_LATITUDE, REFERENCE } from '../../../test/terrain.ts';
 import type { Position } from '../../shared/domain/position.ts';
 import { distanceBetween } from '../../shared/domain/survey/geodesy.ts';
@@ -110,6 +110,27 @@ describe('POST /itineraries/loops', () => {
       return Math.round(((Math.atan2(east, north) * 180) / Math.PI + 360) / 60) % 6;
     });
     expect(new Set(directions).size).toBe(6);
+  });
+
+  it('steers Loops to the hills when the asked Relief is not around the point', async () => {
+    // Flat, but for a 150 m hill 4.2 km north: beyond the Loops drawn around the point.
+    const hill = offset(START, 0, 4200);
+    const { provider, calls } = fakeRouting({
+      elevationAt: (p) => 200 + 150 * Math.max(0, 1 - distanceBetween(p, hill) / 1000),
+    });
+
+    const [loop] = loops(
+      (await askLoops(itinerariesApp(provider), ask({ relief: 'rolling', distance: 10_000 }))).body,
+    );
+
+    expect(loop).toMatchObject({ exact: true, relief: 'rolling' });
+    expect(loop?.length).toBeGreaterThanOrEqual(10_000);
+    expect(loop?.length).toBeLessThanOrEqual(12_000);
+    const closest = Math.min(
+      ...(loop?.path.coordinates ?? []).map((pair) => distanceBetween(toPosition(pair), hill)),
+    );
+    expect(closest).toBeLessThan(300);
+    expect(calls.routeThrough.length + calls.routeTowards.length).toBeLessThanOrEqual(40);
   });
 
   it('stops asking once three exact Loops are found', async () => {

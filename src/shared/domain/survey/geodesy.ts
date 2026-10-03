@@ -32,6 +32,16 @@ export function offset(from: Position, bearing: number, metres: number): Positio
   };
 }
 
+/** Initial bearing from `from` to `to`, in degrees (0 = north, 90 = east). */
+export function bearingBetween(from: Position, to: Position): number {
+  const dLongitude = toRadians(to.longitude - from.longitude);
+  const y = Math.sin(dLongitude) * Math.cos(toRadians(to.latitude));
+  const x =
+    Math.cos(toRadians(from.latitude)) * Math.sin(toRadians(to.latitude)) -
+    Math.sin(toRadians(from.latitude)) * Math.cos(toRadians(to.latitude)) * Math.cos(dLongitude);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
 /** Position at `fraction` (0–1) of the way from `from` to `to`; accurate for short segments. */
 export function interpolate(from: Position, to: Position, fraction: number): Position {
   return {
