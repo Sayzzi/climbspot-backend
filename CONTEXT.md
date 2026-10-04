@@ -7,8 +7,8 @@ ClimbSpot helps runners, trail runners and cyclists find uphill paths near them,
 ### Ascents
 
 **Ascent**:
-A one-way uphill path from a Start to a Top, ridden or run in a single direction. Each side of a mountain is its own Ascent; a descent is never an Ascent.
-_Avoid_: Climb, Hill, Segment, Spot, Côte
+A one-way uphill path from a Start to a Top, ridden or run in a single direction. Each side of a mountain is its own Ascent; a descent is never an Ascent. Visitors see it called a "climb", the word runners and cyclists use; everywhere else it is an Ascent.
+_Avoid_: Climb (outside what Visitors read), Hill, Segment, Spot, Côte
 
 **Start**:
 The lowest point of an Ascent, used to measure how near an Ascent is to someone.
@@ -150,4 +150,4 @@ _Avoid_: Effort, Segment time, Split
 
 ## Reserved for later
 
-Climbing sites will arrive as their own concepts (**Crag**, **Gym**, **Route**, **Boulder**). "Climb" is never used for any of them, nor for an Ascent.
+Climbing sites will arrive as their own concepts (**Crag**, **Gym**, **Route**, **Boulder**). "Climb" is never used for any of them; it only names an Ascent in what Visitors read.
