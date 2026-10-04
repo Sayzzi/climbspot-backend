@@ -1,5 +1,10 @@
 import type { Identity } from '../../../shared/domain/identity.ts';
-import { flatPaceOf, newAccount, type Account, type MyAccount } from '../domain/account.ts';
+import {
+  flatPaceOf,
+  newAccount,
+  type Account,
+  type AccountWithFlatPace,
+} from '../domain/account.ts';
 import type { AccountRepository } from '../domain/account-repository.ts';
 import type { StravaFlatPace } from '../domain/strava-flat-pace.ts';
 
@@ -14,7 +19,7 @@ export class GetMyAccount {
     private readonly stravaFlatPace: StravaFlatPace,
   ) {}
 
-  async execute(identity: Identity): Promise<MyAccount> {
+  async execute(identity: Identity): Promise<AccountWithFlatPace> {
     return this.withFlatPace(await this.account(identity));
   }
 
@@ -34,7 +39,7 @@ export class GetMyAccount {
     return account;
   }
 
-  async withFlatPace(account: Account): Promise<MyAccount> {
+  async withFlatPace(account: Account): Promise<AccountWithFlatPace> {
     const stravaFlatPace = await this.stravaFlatPace.of(account.visitorId);
     return { account, flatPace: flatPaceOf(account, stravaFlatPace), stravaFlatPace };
   }

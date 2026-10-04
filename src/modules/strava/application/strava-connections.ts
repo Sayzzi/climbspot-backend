@@ -100,29 +100,38 @@ export class StravaConnections {
   }
 
   /**
-   * Erases the connection and its Recorded Runs, after withdrawing ClimbSpot's access
-   * at Strava when Strava can be reached: the Visitor's wish to disconnect never waits
-   * on Strava.
+   * Ends the connection: erases everything kept from Strava, then withdraws ClimbSpot's
+   * access at Strava when Strava can be reached. The Visitor's wish to disconnect never
+   * waits on Strava: it keeps a grant ClimbSpot no longer holds, which the Visitor can
+   * withdraw there.
    */
   async end(visitorId: string): Promise<void> {
-    const { connections, runs, ascentTimes, gateway } = this.dependencies;
+    const revoke = await this.erase(visitorId);
+    try {
+      await revoke?.();
+    } catch {
+      // See above: nothing is kept either way.
+    }
+  }
+
+  /**
+   * Erases the connection, its Recorded Runs and Ascent Times.
+   * @returns How to withdraw ClimbSpot's access at Strava, once the erasure holds.
+   */
+  async erase(visitorId: string): Promise<(() => Promise<void>) | undefined> {
+    const { connections, runs, ascentTimes, gateway, now } = this.dependencies;
     const connection = await connections.find(visitorId);
     if (!connection) {
-      return;
-    }
-    try {
-      await gateway.revoke((await this.freshTokens(connection)).accessToken);
-    } catch {
-      // Strava will keep a grant ClimbSpot no longer holds: the Visitor can withdraw it there.
+      return undefined;
     }
     await ascentTimes.eraseAllOf(visitorId);
     await runs.deleteAllOf(visitorId);
     await connections.delete(visitorId);
-  }
-
-  /** The Flat Pace worked out from the Visitor's Recorded Runs, if any. */
-  async flatPace(visitorId: string): Promise<number | undefined> {
-    return (await this.dependencies.connections.find(visitorId))?.flatPace;
+    const { tokens } = connection;
+    return async () => {
+      const usable = isFresh(tokens, now()) ? tokens : await gateway.refresh(tokens.refreshToken);
+      await gateway.revoke(usable.accessToken);
+    };
   }
 
   /**
@@ -179,7 +188,7 @@ export class StravaConnections {
   private async freshTokens(connection: StravaConnection): Promise<StravaTokens> {
     const { connections, gateway, now } = this.dependencies;
     const current = (await connections.find(connection.visitorId)) ?? connection;
-    if (current.tokens.expiresAt.getTime() - now().getTime() > REFRESH_MARGIN_MS) {
+    if (isFresh(current.tokens, now())) {
       return current.tokens;
     }
     const tokens = await gateway.refresh(current.tokens.refreshToken);
@@ -187,3 +196,7 @@ export class StravaConnections {
     return tokens;
   }
 }
+
+/** Whether tokens still have a while before they expire. */
+const isFresh = (tokens: StravaTokens, now: Date) =>
+  tokens.expiresAt.getTime() - now.getTime() > REFRESH_MARGIN_MS;

@@ -3,13 +3,12 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../../../../shared/infrastructure/database.ts';
 import type {
   AscentRepository,
-  Bounds,
   NearbyAscent,
   NearbyCriteria,
 } from '../../domain/ascent-repository.ts';
 import { startOf, topOf, type Ascent, type AscentPoint } from '../../domain/ascent.ts';
 import { buildProfile } from '../../../../shared/domain/survey/elevation-profile.ts';
-import type { Position } from '../../../../shared/domain/position.ts';
+import type { Bounds, Position } from '../../../../shared/domain/position.ts';
 import { ascents } from './ascents.schema.ts';
 
 const toWkt = ({ longitude, latitude }: Position) => `${String(longitude)} ${String(latitude)}`;

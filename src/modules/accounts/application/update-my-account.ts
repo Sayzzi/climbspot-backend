@@ -1,5 +1,5 @@
 import type { Identity } from '../../../shared/domain/identity.ts';
-import type { Account, MyAccount } from '../domain/account.ts';
+import type { Account, AccountWithFlatPace } from '../domain/account.ts';
 import type { AccountRepository } from '../domain/account-repository.ts';
 import type { GetMyAccount } from './get-my-account.ts';
 
@@ -16,7 +16,7 @@ export class UpdateMyAccount {
     private readonly getMyAccount: GetMyAccount,
   ) {}
 
-  async execute(identity: Identity, changes: AccountChanges): Promise<MyAccount> {
+  async execute(identity: Identity, changes: AccountChanges): Promise<AccountWithFlatPace> {
     const account = await this.getMyAccount.account(identity);
     const updated: Account = {
       ...account,

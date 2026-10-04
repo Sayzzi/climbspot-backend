@@ -52,6 +52,14 @@ export class DrizzleStravaConnectionRepository implements StravaConnectionReposi
       .onConflictDoUpdate({ target: stravaConnections.visitorId, set: values });
   }
 
+  async flatPaceOf(visitorId: string): Promise<number | undefined> {
+    const [row] = await this.db
+      .select({ flatPace: stravaConnections.flatPace })
+      .from(stravaConnections)
+      .where(eq(stravaConnections.visitorId, visitorId));
+    return row?.flatPace ?? undefined;
+  }
+
   async delete(visitorId: string): Promise<void> {
     await this.db.delete(stravaConnections).where(eq(stravaConnections.visitorId, visitorId));
   }

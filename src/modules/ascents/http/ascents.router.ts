@@ -11,7 +11,11 @@ import type { GetMyAscentTimes } from '../application/get-my-ascent-times.ts';
 import { GpxTooLargeError } from '../domain/ascent-errors.ts';
 import { MAXIMUM_GPX_FILE_SIZE } from '../domain/ascent-rules.ts';
 import type { PathReader } from '../domain/path-reader.ts';
-import { toAscentResponse, toNearbyAscentsResponse } from './ascent.mapper.ts';
+import {
+  toAscentResponse,
+  toMyAscentTimesResponse,
+  toNearbyAscentsResponse,
+} from './ascent.mapper.ts';
 import {
   ascentIdParamsSchema,
   createAscentFieldsSchema,
@@ -92,13 +96,7 @@ export function createAscentsRouter({
     const { visitorId } = signedInVisitor(res);
     const { id } = ascentIdParamsSchema.parse(req.params);
 
-    const times = await getMyAscentTimes.execute(visitorId, id);
-    res.json({
-      ascentTimes: times.map(({ startedAt, seconds }) => ({
-        startedAt: startedAt.toISOString(),
-        seconds,
-      })),
-    });
+    res.json(toMyAscentTimesResponse(await getMyAscentTimes.execute(visitorId, id)));
   });
 
   return router;

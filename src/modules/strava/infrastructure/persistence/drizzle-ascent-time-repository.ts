@@ -1,7 +1,8 @@
 import { and, count, desc, eq, inArray, min } from 'drizzle-orm';
 
 import type { Database } from '../../../../shared/infrastructure/database.ts';
-import type { AscentTime, AscentTimeSummary } from '../../domain/ascent-time.ts';
+import type { AscentTimeSummary } from '../../../../shared/domain/ascent-times.ts';
+import type { AscentTime } from '../../domain/ascent-time.ts';
 import type { AscentTimeRepository } from '../../domain/ascent-time-repository.ts';
 import { ascentTimes } from './strava.schema.ts';
 

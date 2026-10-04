@@ -2,11 +2,8 @@ import type { HttpModule } from '../../shared/http/http-module.ts';
 import type { Database } from '../../shared/infrastructure/database.ts';
 import { AscentTimes } from './application/ascent-times.ts';
 import { StravaConnections } from './application/strava-connections.ts';
-import {
-  emptyCatalogue,
-  type AscentCatalogue,
-  type CatalogueAscent,
-} from './domain/ascent-catalogue.ts';
+import type { AscentPath } from '../../shared/domain/ascent-times.ts';
+import { emptyCatalogue, type AscentCatalogue } from './domain/ascent-catalogue.ts';
 import type { StravaGateway } from './domain/strava-gateway.ts';
 import { registerStravaOpenApi } from './http/strava.openapi.ts';
 import { createStravaRouter } from './http/strava.router.ts';
@@ -16,7 +13,7 @@ import { DrizzleStravaConnectionRepository } from './infrastructure/persistence/
 import { SignedConnectionStates } from './infrastructure/signed-connection-states.ts';
 import { TokenVault } from './infrastructure/token-vault.ts';
 
-export type { AscentCatalogue, CatalogueAscent } from './domain/ascent-catalogue.ts';
+export type { AscentCatalogue } from './domain/ascent-catalogue.ts';
 export type { TrackSample } from './domain/recorded-run.ts';
 export type { StravaGateway, StravaGrant, StravaOuting } from './domain/strava-gateway.ts';
 export {
@@ -78,16 +75,19 @@ export function createStravaModule({
 }
 
 /** The Flat Pace worked out from each Visitor's Recorded Runs, for their account. */
-export function stravaFlatPace({ db, ...settings }: StravaSettings & { readonly db: Database }) {
-  const connections = stravaConnections(db, settings);
-  return { of: (visitorId: string) => connections.flatPace(visitorId) };
+export function stravaFlatPace({
+  db,
+  tokenKey,
+}: Pick<StravaSettings, 'tokenKey'> & { readonly db: Database }) {
+  const connections = new DrizzleStravaConnectionRepository(db, new TokenVault(tokenKey));
+  return { of: (visitorId: string) => connections.flatPaceOf(visitorId) };
 }
 
 /** Ends a Visitor's Strava Connection when their account is deleted. */
 export function forgetStravaConnection(settings: StravaSettings) {
   return (db: Database) => {
     const connections = stravaConnections(db, settings);
-    return { erase: (visitorId: string) => connections.end(visitorId) };
+    return { erase: (visitorId: string) => connections.erase(visitorId) };
   };
 }
 
@@ -108,5 +108,5 @@ export function stravaAscentTimes(db: Database) {
 /** Finds, in every stored Recorded Run, the Ascent Times of an Ascent just added. */
 export function matchNewAscent(db: Database) {
   const times = ascentTimes(db);
-  return (ascent: CatalogueAscent) => times.onAscent(ascent);
+  return (ascent: AscentPath) => times.onAscent(ascent);
 }

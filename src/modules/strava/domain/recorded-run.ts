@@ -1,4 +1,11 @@
-import { IMPORT_MONTHS, RECORDED_RUN_SPORTS, TRACK_SPACING } from './strava-rules.ts';
+import type { Bounds, Position } from '../../../shared/domain/position.ts';
+import { METRES_PER_DEGREE_OF_LATITUDE } from '../../../shared/domain/survey/geodesy.ts';
+import {
+  ASCENT_TIME_RADIUS,
+  IMPORT_MONTHS,
+  RECORDED_RUN_SPORTS,
+  TRACK_SPACING,
+} from './strava-rules.ts';
 
 /** One reading of a Strava recording, as Strava gives it. */
 export interface TrackSample {
@@ -67,4 +74,22 @@ export function toTrack(samples: readonly TrackSample[]): TrackPoint[] {
     }
   });
   return track;
+}
+
+/** The box around a track, widened by {@link ASCENT_TIME_RADIUS} metres on every side. */
+export function boundsOf(track: readonly Position[]): Bounds | undefined {
+  if (track.length === 0) {
+    return undefined;
+  }
+  const latitudes = track.map((point) => point.latitude);
+  const longitudes = track.map((point) => point.longitude);
+  const latitudeMargin = ASCENT_TIME_RADIUS / METRES_PER_DEGREE_OF_LATITUDE;
+  const middle = (Math.min(...latitudes) + Math.max(...latitudes)) / 2;
+  const longitudeMargin = latitudeMargin / Math.cos((middle * Math.PI) / 180);
+  return {
+    south: Math.min(...latitudes) - latitudeMargin,
+    west: Math.min(...longitudes) - longitudeMargin,
+    north: Math.max(...latitudes) + latitudeMargin,
+    east: Math.max(...longitudes) + longitudeMargin,
+  };
 }

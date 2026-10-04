@@ -1,7 +1,8 @@
-import type { AscentCatalogue, CatalogueAscent } from '../domain/ascent-catalogue.ts';
-import { ascentTimesOn, boundsOf } from '../domain/ascent-time.ts';
+import type { AscentPath } from '../../../shared/domain/ascent-times.ts';
+import type { AscentCatalogue } from '../domain/ascent-catalogue.ts';
+import { ascentTimesOn } from '../domain/ascent-time.ts';
 import type { AscentTimeRepository } from '../domain/ascent-time-repository.ts';
-import type { RecordedRun } from '../domain/recorded-run.ts';
+import { boundsOf, type RecordedRun } from '../domain/recorded-run.ts';
 import type { RecordedRunRepository } from '../domain/recorded-run-repository.ts';
 
 export interface AscentTimesDependencies {
@@ -30,7 +31,7 @@ export class AscentTimes {
   }
 
   /** Finds the Ascent Times of a newly added Ascent in every stored Recorded Run. */
-  async onAscent(ascent: CatalogueAscent): Promise<void> {
+  async onAscent(ascent: AscentPath): Promise<void> {
     const { times, runs } = this.dependencies;
     const start = ascent.path[0];
     if (!start) {

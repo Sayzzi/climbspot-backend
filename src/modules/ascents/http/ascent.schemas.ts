@@ -135,6 +135,8 @@ export const myAscentTimesSchema = z
   })
   .meta({ id: 'MyAscentTimes' });
 
+export type MyAscentTimesResponse = z.infer<typeof myAscentTimesSchema>;
+
 export type NearbyAscentsResponse = z.infer<typeof nearbyAscentsSchema>;
 
 export type AscentSummaryResponse = z.infer<typeof ascentSummarySchema>;

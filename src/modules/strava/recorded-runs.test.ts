@@ -125,7 +125,12 @@ describe('Importing Recorded Runs', () => {
     const connected = await connect(app, VISITOR_A);
 
     expect(connected.status).toBe(200);
-    expect(connected.body).toMatchObject({ status: 'connected', recordedRuns: 1 });
+    // Not synchronised in full: the Visitor can be told the import carries on.
+    expect(connected.body).toMatchObject({
+      status: 'connected',
+      recordedRuns: 1,
+      lastSyncAt: null,
+    });
 
     const limited = await sync(app, VISITOR_A);
     expect(limited.status).toBe(503);

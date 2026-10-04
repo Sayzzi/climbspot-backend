@@ -1,6 +1,6 @@
 import type { Database } from '../../../../shared/infrastructure/database.ts';
 import type { AccountErasure } from '../../domain/account-erasure.ts';
-import type { VisitorDataEraser } from '../../domain/visitor-data-eraser.ts';
+import type { AfterErasure, VisitorDataEraser } from '../../domain/visitor-data-eraser.ts';
 import { DrizzleAccountRepository } from './drizzle-account-repository.ts';
 
 /** What one module keeps about a Visitor, erased through the database it is given. */
@@ -13,13 +13,18 @@ export class DrizzleAccountErasure implements AccountErasure {
     private readonly erasers: readonly VisitorDataEraserFor[],
   ) {}
 
-  async erase(visitorId: string, confirm: () => Promise<void>): Promise<void> {
-    await this.db.transaction(async (transaction) => {
+  async erase(visitorId: string, confirm: () => Promise<void>): Promise<AfterErasure[]> {
+    return this.db.transaction(async (transaction) => {
+      const afterwards: AfterErasure[] = [];
       for (const eraserFor of this.erasers) {
-        await eraserFor(transaction).erase(visitorId);
+        const after = await eraserFor(transaction).erase(visitorId);
+        if (after) {
+          afterwards.push(after);
+        }
       }
       await new DrizzleAccountRepository(transaction).delete(visitorId);
       await confirm();
+      return afterwards;
     });
   }
 }

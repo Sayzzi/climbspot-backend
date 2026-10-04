@@ -29,8 +29,14 @@ import { uniformGradient } from './terrain.ts';
 /** The key test tokens are encrypted with: 32 bytes, base64. */
 export const TEST_TOKEN_KEY = Buffer.alloc(32, 7).toString('base64');
 
+export interface StravaAppOptions {
+  readonly gateway?: StravaGateway;
+  /** Supabase fails to delete the user, as when it is down. */
+  readonly directoryFailing?: boolean;
+}
+
 export interface StravaApp {
-  (options?: { gateway?: StravaGateway }): Express;
+  (options?: StravaAppOptions): Express;
   /** The test database, to look at what the API never shows. */
   readonly db: () => Database;
 }
@@ -55,7 +61,10 @@ export function useStravaApp(): StravaApp {
 
   beforeEach(() => testDatabase.truncate());
 
-  const build = ({ gateway = fakeStrava().gateway }: { gateway?: StravaGateway } = {}) => {
+  const build = ({
+    gateway = fakeStrava().gateway,
+    directoryFailing = false,
+  }: StravaAppOptions = {}) => {
     const strava = { gateway, tokenKey: TEST_TOKEN_KEY };
     const db = connection.db;
     return createApp({
@@ -72,7 +81,7 @@ export function useStravaApp(): StravaApp {
         }),
         createAccountsModule({
           db: connection.db,
-          directory: fakeAccountDirectory().directory,
+          directory: fakeAccountDirectory({ failing: directoryFailing }).directory,
           erasers: [forgetStravaConnection(strava)],
           stravaFlatPace: stravaFlatPace({ db: connection.db, ...strava }),
         }),

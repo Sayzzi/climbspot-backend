@@ -2,8 +2,7 @@ import { and, count, eq, gte, lte, max } from 'drizzle-orm';
 
 import type { Position } from '../../../../shared/domain/position.ts';
 import type { Database } from '../../../../shared/infrastructure/database.ts';
-import { boundsOf } from '../../domain/ascent-time.ts';
-import type { RecordedRun, TrackPoint } from '../../domain/recorded-run.ts';
+import { boundsOf, type RecordedRun, type TrackPoint } from '../../domain/recorded-run.ts';
 import type { RecordedRunRepository } from '../../domain/recorded-run-repository.ts';
 import { recordedRuns } from './strava.schema.ts';
 

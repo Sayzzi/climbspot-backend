@@ -1,11 +1,6 @@
 import type { Position } from '../../../shared/domain/position.ts';
-import {
-  distanceBetween,
-  interpolate,
-  lengthOf,
-  METRES_PER_DEGREE_OF_LATITUDE,
-} from '../../../shared/domain/survey/geodesy.ts';
-import type { Bounds, CatalogueAscent } from './ascent-catalogue.ts';
+import { distanceBetween, interpolate, lengthOf } from '../../../shared/domain/survey/geodesy.ts';
+import type { AscentPath } from '../../../shared/domain/ascent-times.ts';
 import type { RecordedRun, TrackPoint } from './recorded-run.ts';
 import { ASCENT_CHECKPOINTS, ASCENT_TIME_RADIUS } from './strava-rules.ts';
 
@@ -20,12 +15,6 @@ export interface AscentTime {
   readonly seconds: number;
 }
 
-/** A Visitor's best Ascent Time on one Ascent, and how many they have there. */
-export interface AscentTimeSummary {
-  readonly best: number;
-  readonly count: number;
-}
-
 interface Pass {
   readonly point: TrackPoint;
   /** Metres from where the run had to come. */
@@ -34,17 +23,20 @@ interface Pass {
 
 /**
  * Every time a Recorded Run went up an Ascent: it came within {@link ASCENT_TIME_RADIUS}
- * metres of the Start, then of each checkpoint along the path in order, then of the
+ * metres (less on a short Ascent) of the Start, then of each checkpoint along the path in order, then of the
  * Top. The time runs between its closest passes at Start and Top. A run that only
  * crosses the Ascent, cuts a corner, or goes down it makes none.
  */
-export function ascentTimesOn(run: RecordedRun, ascent: CatalogueAscent): AscentTime[] {
+export function ascentTimesOn(run: RecordedRun, ascent: AscentPath): AscentTime[] {
   const start = ascent.path[0];
   const top = ascent.path.at(-1);
   if (!start || !top) {
     return [];
   }
   const checkpoints = ASCENT_CHECKPOINTS.map((fraction) => along(ascent.path, fraction));
+  const radius = Math.min(ASCENT_TIME_RADIUS, lengthOf(ascent.path) / 8);
+  const near = (point: Position, checkpoint: Position | undefined) =>
+    checkpoint !== undefined && distanceBetween(point, checkpoint) <= radius;
   const times: AscentTime[] = [];
   let atStart: Pass | undefined;
   let wasAtStart = false;
@@ -64,7 +56,7 @@ export function ascentTimesOn(run: RecordedRun, ascent: CatalogueAscent): Ascent
   for (const point of run.track) {
     if (atStart && atTop) {
       const fromTop = distanceBetween(point, top);
-      if (fromTop <= ASCENT_TIME_RADIUS) {
+      if (fromTop <= radius) {
         if (fromTop < atTop.distance) {
           atTop = { point, distance: fromTop };
         }
@@ -75,7 +67,7 @@ export function ascentTimesOn(run: RecordedRun, ascent: CatalogueAscent): Ascent
     }
 
     const fromStart = distanceBetween(point, start);
-    const isAtStart = fromStart <= ASCENT_TIME_RADIUS;
+    const isAtStart = fromStart <= radius;
     if (isAtStart) {
       // A new visit to the Start begins a new attempt; within one, the closest pass counts.
       if (!wasAtStart || reached > 0 || !atStart || fromStart < atStart.distance) {
@@ -93,7 +85,7 @@ export function ascentTimesOn(run: RecordedRun, ascent: CatalogueAscent): Ascent
       reached += 1;
     }
     const fromTop = distanceBetween(point, top);
-    if (reached === checkpoints.length && fromTop <= ASCENT_TIME_RADIUS) {
+    if (reached === checkpoints.length && fromTop <= radius) {
       atTop = { point, distance: fromTop };
     }
   }
@@ -102,27 +94,6 @@ export function ascentTimesOn(run: RecordedRun, ascent: CatalogueAscent): Ascent
   }
   return times;
 }
-
-/** The box around a track, widened by {@link ASCENT_TIME_RADIUS} metres on every side. */
-export function boundsOf(track: readonly Position[]): Bounds | undefined {
-  if (track.length === 0) {
-    return undefined;
-  }
-  const latitudes = track.map((point) => point.latitude);
-  const longitudes = track.map((point) => point.longitude);
-  const latitudeMargin = ASCENT_TIME_RADIUS / METRES_PER_DEGREE_OF_LATITUDE;
-  const middle = (Math.min(...latitudes) + Math.max(...latitudes)) / 2;
-  const longitudeMargin = latitudeMargin / Math.cos((middle * Math.PI) / 180);
-  return {
-    south: Math.min(...latitudes) - latitudeMargin,
-    west: Math.min(...longitudes) - longitudeMargin,
-    north: Math.max(...latitudes) + latitudeMargin,
-    east: Math.max(...longitudes) + longitudeMargin,
-  };
-}
-
-const near = (point: Position, checkpoint: Position | undefined) =>
-  checkpoint !== undefined && distanceBetween(point, checkpoint) <= ASCENT_TIME_RADIUS;
 
 /** The position at `fraction` of a path's length. */
 function along(path: readonly Position[], fraction: number): Position | undefined {

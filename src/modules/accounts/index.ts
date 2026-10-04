@@ -15,7 +15,7 @@ import { DrizzleAccountRepository } from './infrastructure/persistence/drizzle-a
 
 export type { AccountDirectory } from './domain/account-directory.ts';
 export type { StravaFlatPace } from './domain/strava-flat-pace.ts';
-export type { VisitorDataEraser } from './domain/visitor-data-eraser.ts';
+export type { AfterErasure, VisitorDataEraser } from './domain/visitor-data-eraser.ts';
 export type { VisitorDataEraserFor } from './infrastructure/persistence/drizzle-account-erasure.ts';
 export { SupabaseAccountDirectory } from './infrastructure/supabase-account-directory.ts';
 

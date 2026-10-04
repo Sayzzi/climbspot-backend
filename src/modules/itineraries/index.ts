@@ -71,5 +71,10 @@ export function createSavedItinerariesModule({
 /** Erases a Visitor's Saved Itineraries when their account is deleted. */
 export function forgetSavedItineraries(db: Database) {
   const repository = new DrizzleSavedItineraryRepository(db);
-  return { erase: (visitorId: string) => repository.deleteAllOf(visitorId) };
+  return {
+    erase: async (visitorId: string) => {
+      await repository.deleteAllOf(visitorId);
+      return undefined;
+    },
+  };
 }

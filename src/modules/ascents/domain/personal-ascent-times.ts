@@ -1,10 +1,6 @@
-import type { Position } from '../../../shared/domain/position.ts';
+import type { AscentPath, AscentTimeSummary } from '../../../shared/domain/ascent-times.ts';
 
-/** A Visitor's best Ascent Time on an Ascent, in seconds, and how many they have there. */
-export interface AscentTimeSummary {
-  readonly best: number;
-  readonly count: number;
-}
+export type { AscentTimeSummary } from '../../../shared/domain/ascent-times.ts';
 
 /** One of a Visitor's Ascent Times: when they left the Start, and how long they took. */
 export interface PersonalAscentTime {
@@ -32,7 +28,4 @@ export const noAscentTimes: PersonalAscentTimes = {
 };
 
 /** Told of every Ascent added to the catalogue, e.g. to find its Ascent Times. */
-export type AscentAddedListener = (ascent: {
-  readonly id: string;
-  readonly path: readonly Position[];
-}) => Promise<void>;
+export type AscentAddedListener = (ascent: AscentPath) => Promise<void>;

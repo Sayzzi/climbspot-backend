@@ -1,4 +1,5 @@
-import type { AscentTime, AscentTimeSummary } from './ascent-time.ts';
+import type { AscentTimeSummary } from '../../../shared/domain/ascent-times.ts';
+import type { AscentTime } from './ascent-time.ts';
 
 export interface AscentTimeRepository {
   /** Keeps the Ascent Times, leaving out those already kept. */

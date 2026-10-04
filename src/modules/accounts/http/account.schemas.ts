@@ -2,9 +2,10 @@ import { z } from 'zod';
 
 import {
   DISPLAY_NAME_MAX_LENGTH,
+  FLAT_PACE_SOURCES,
   FASTEST_FLAT_PACE,
   SLOWEST_FLAT_PACE,
-  type MyAccount,
+  type AccountWithFlatPace,
 } from '../domain/account.ts';
 
 const flatPace = z
@@ -20,7 +21,7 @@ export const accountSchema = z
     flatPace: flatPace.nullable().meta({
       description: 'The Flat Pace that applies: the one stated, or else the one from Strava.',
     }),
-    flatPaceSource: z.enum(['stated', 'strava']).nullable(),
+    flatPaceSource: z.enum(FLAT_PACE_SOURCES).nullable(),
     stravaFlatPace: flatPace.nullable().meta({
       description: 'The Flat Pace from Strava, even when a stated one applies.',
     }),
@@ -42,7 +43,7 @@ export function toAccountResponse({
   account,
   flatPace,
   stravaFlatPace,
-}: MyAccount): AccountResponse {
+}: AccountWithFlatPace): AccountResponse {
   return {
     displayName: account.displayName,
     email: account.email ?? null,

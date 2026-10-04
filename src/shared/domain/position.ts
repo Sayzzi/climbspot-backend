@@ -3,3 +3,11 @@ export interface Position {
   readonly latitude: number;
   readonly longitude: number;
 }
+
+/** A latitude and longitude box. */
+export interface Bounds {
+  readonly south: number;
+  readonly west: number;
+  readonly north: number;
+  readonly east: number;
+}

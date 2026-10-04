@@ -11,7 +11,8 @@ export interface Account {
 }
 
 /** Where a Flat Pace comes from: the Visitor, or their Recorded Runs on Strava. */
-export type FlatPaceSource = 'stated' | 'strava';
+export const FLAT_PACE_SOURCES = ['stated', 'strava'] as const;
+export type FlatPaceSource = (typeof FLAT_PACE_SOURCES)[number];
 
 export interface FlatPace {
   readonly secondsPerKm: number;
@@ -19,7 +20,7 @@ export interface FlatPace {
 }
 
 /** An account, with the Flat Pace that applies to it. */
-export interface MyAccount {
+export interface AccountWithFlatPace {
   readonly account: Account;
   readonly flatPace: FlatPace | undefined;
   /** The Flat Pace from Strava, even when a stated one applies: the Visitor may go back to it. */

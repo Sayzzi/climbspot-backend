@@ -6,7 +6,7 @@ import { CreateAscent } from './application/create-ascent.ts';
 import { FindAscentsNearby } from './application/find-ascents-nearby.ts';
 import { GetAscent } from './application/get-ascent.ts';
 import { GetMyAscentTimes } from './application/get-my-ascent-times.ts';
-import type { Bounds } from './domain/ascent-repository.ts';
+import type { Bounds } from '../../shared/domain/position.ts';
 import type { ElevationProvider } from './domain/elevation-provider.ts';
 import {
   noAscentTimes,
@@ -68,7 +68,12 @@ export function createAscentsModule({
 /** Erases who added Ascents when a Contributor's account is deleted; the Ascents stay. */
 export function forgetContributor(db: Database) {
   const repository = new DrizzleAscentRepository(db);
-  return { erase: (visitorId: string) => repository.forgetContributor(visitorId) };
+  return {
+    erase: async (visitorId: string) => {
+      await repository.forgetContributor(visitorId);
+      return undefined;
+    },
+  };
 }
 
 /** The Ascents of the catalogue whose Start lies within a box, with their paths. */

@@ -163,6 +163,17 @@ describe('Strava Connection', () => {
     expect(await connectionOf(app, VISITOR_B)).toMatchObject({ status: 'connected' });
   });
 
+  it('stays, unrevoked, when the account cannot be deleted', async () => {
+    const strava = fakeStrava();
+    const app = buildApp({ gateway: strava.gateway, directoryFailing: true });
+    await connect(app, VISITOR_A);
+
+    expect((await request(app).delete('/me').set(as(VISITOR_A))).status).toBe(503);
+
+    expect(strava.revoked).toEqual([]);
+    expect(await connectionOf(app, VISITOR_A)).toMatchObject({ status: 'connected' });
+  });
+
   it('is described in the OpenAPI document', async () => {
     const { body } = await request(buildApp()).get('/openapi.json');
 
