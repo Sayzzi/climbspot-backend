@@ -41,16 +41,16 @@ describe('rememberedSecondFactors', () => {
     expect(asked()).toBe(2);
   });
 
-  it('serves a recent answer when asking again fails, and fails without one', async () => {
+  it('fails when asking fails past the minute', async () => {
     const { inner } = source([true, new Error('down')]);
     const time = clock();
     const factors = rememberedSecondFactors(inner, time.now);
     await factors.has('ada');
 
-    time.advance(5 * 60);
+    time.advance(30);
     expect(await factors.has('ada')).toBe(true);
 
-    time.advance(6 * 60);
+    time.advance(31);
     await expect(factors.has('ada')).rejects.toThrow('down');
     await expect(factors.has('bob')).rejects.toThrow('down');
   });

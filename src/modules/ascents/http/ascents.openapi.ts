@@ -1,6 +1,6 @@
 import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 
-import { bearerAuth } from '../../../shared/http/identity.ts';
+import { bearerAuth, withSignedInResponses } from '../../../shared/http/identity.ts';
 import { apiErrorSchema } from '../../../shared/http/api-error.ts';
 import {
   MAXIMUM_GPX_FILE_SIZE,
@@ -44,7 +44,7 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
       },
     },
     security: bearerAuth,
-    responses: {
+    responses: withSignedInResponses({
       201: {
         description: 'The Ascent was created.',
         content: { 'application/json': { schema: ascentSchema } },
@@ -65,7 +65,7 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
       503: errorResponse(
         '`ELEVATION_UNAVAILABLE`: the terrain model cannot be reached; retry later.',
       ),
-    },
+    }),
   });
 
   registry.registerPath({
@@ -113,7 +113,7 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
     tags: ['Ascents'],
     security: bearerAuth,
     request: { params: ascentIdParamsSchema },
-    responses: {
+    responses: withSignedInResponses({
       200: {
         description: 'Their Ascent Times; empty when they have none.',
         content: { 'application/json': { schema: myAscentTimesSchema } },
@@ -121,6 +121,6 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
       400: errorResponse('`VALIDATION_FAILED`: the id is not a UUID.'),
       401: errorResponse('`AUTHENTICATION_REQUIRED`: nobody is signed in.'),
       404: errorResponse('`ASCENT_NOT_FOUND`: no Ascent has this id.'),
-    },
+    }),
   });
 }

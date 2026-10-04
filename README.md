@@ -8,17 +8,17 @@ REST API for ClimbSpot: find uphill paths (**Ascents**) near you for running, tr
 
 ## Stack
 
-| Concern      | Choice                                                                                                      |
-| ------------ | ----------------------------------------------------------------------------------------------------------- |
-| Runtime      | Node.js 22 (ESM)                                                                                            |
-| HTTP         | Express 5, helmet, cors                                                                                     |
-| Validation   | zod 4                                                                                                       |
-| API contract | OpenAPI 3.1 generated from zod schemas, served at `GET /openapi.json`                                       |
-| Database     | PostgreSQL + PostGIS on Supabase, accessed with Drizzle ORM + postgres.js                                   |
-| Auth         | Supabase Auth (magic link, Google) — the API verifies the JWTs it issues                                    |
-| Logging      | pino (pretty in development, JSON otherwise)                                                                |
-| Tests        | Vitest + supertest                                                                                          |
-| Quality      | TypeScript strict, ESLint (typescript-eslint strict + boundaries), Prettier, husky, lint-staged, commitlint |
+| Concern      | Choice                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Runtime      | Node.js 22 (ESM)                                                                                                    |
+| HTTP         | Express 5, helmet, cors                                                                                             |
+| Validation   | zod 4                                                                                                               |
+| API contract | OpenAPI 3.1 generated from zod schemas, served at `GET /openapi.json`                                               |
+| Database     | PostgreSQL + PostGIS on Supabase, accessed with Drizzle ORM + postgres.js                                           |
+| Auth         | Supabase Auth (magic link, password, Google, passkey; optional second factor) — the API verifies the JWTs it issues |
+| Logging      | pino (pretty in development, JSON otherwise)                                                                        |
+| Tests        | Vitest + supertest                                                                                                  |
+| Quality      | TypeScript strict, ESLint (typescript-eslint strict + boundaries), Prettier, husky, lint-staged, commitlint         |
 
 ## Getting started
 
@@ -91,7 +91,7 @@ src/
 │   ├── config/              # environment validation
 │   ├── domain/              # DomainError, Position, Identity, and survey/: how any path is sampled and measured
 │   ├── http/                # error handling, OpenAPI document, HttpModule contract, who is signed in
-│   └── infrastructure/      # logger, database connection, Supabase token verification
+│   └── infrastructure/      # logger, database connection, Supabase token verification and second factors
 ├── app.ts                   # createApp(deps): pure HTTP application, used by tests
 └── server.ts                # composition root: reads env, wires dependencies, listens
 ```

@@ -13,6 +13,7 @@ import {
 } from '../../../test/identity.ts';
 import { REFERENCE, straightNorth } from '../../../test/terrain.ts';
 import type { Identity } from '../domain/identity.ts';
+import { rememberedSecondFactors } from '../infrastructure/remembered-second-factors.ts';
 
 const buildApp = useAccountsApp();
 
@@ -27,6 +28,7 @@ describe('A Visitor with a second factor', () => {
     ['delete', '/me'],
     ['get', '/saved-itineraries'],
     ['post', '/ascents'],
+    ['get', '/ascents/00000000-0000-4000-8000-000000000001/my-times'],
   ] as const)(
     'needs a session that gave its code: %s %s answers SECOND_FACTOR_REQUIRED',
     async (method, path) => {
@@ -101,12 +103,30 @@ describe('A Visitor without a second factor', () => {
   });
 });
 
+describe('Asking who has a second factor', () => {
+  it('happens once a minute per Visitor, not on every request', async () => {
+    const factors = protectingAda();
+    const app = buildApp({ secondFactors: rememberedSecondFactors(factors.secondFactors) });
+
+    await request(app).get('/me').set(as(VISITOR_A));
+    await request(app).get('/saved-itineraries').set(as(VISITOR_A));
+
+    expect(factors.asked).toEqual([VISITOR_A.visitorId]);
+  });
+});
+
 describe('The OpenAPI document', () => {
-  it('says what a session without the code is answered', async () => {
+  it('says what a session without the code is answered, route by route', async () => {
     const { body } = await request(buildApp()).get('/openapi.json');
 
     const description = body.components.securitySchemes.bearerAuth.description as string;
     expect(description).toContain('SECOND_FACTOR_REQUIRED');
-    expect(description).toContain('AUTHENTICATION_UNAVAILABLE');
+    const { responses } = body.paths['/me'].delete;
+    expect(responses['401'].description).toContain('SECOND_FACTOR_REQUIRED');
+    expect(responses['503'].description).toContain('ACCOUNT_DELETION_UNAVAILABLE');
+    expect(responses['503'].description).toContain('AUTHENTICATION_UNAVAILABLE');
+    expect(body.paths['/saved-itineraries'].get.responses['503'].description).toContain(
+      'AUTHENTICATION_UNAVAILABLE',
+    );
   });
 });

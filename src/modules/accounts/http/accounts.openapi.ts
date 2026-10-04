@@ -1,7 +1,7 @@
 import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 
 import { apiErrorSchema } from '../../../shared/http/api-error.ts';
-import { bearerAuth } from '../../../shared/http/identity.ts';
+import { bearerAuth, withSignedInResponses } from '../../../shared/http/identity.ts';
 import { accountChangesSchema, accountSchema } from './account.schemas.ts';
 
 const errorResponse = (description: string) => ({
@@ -18,13 +18,13 @@ export function registerAccountsOpenApi(registry: OpenAPIRegistry, basePath: str
     description: 'Created on first use, named after the identity.',
     tags: ['Accounts'],
     security: bearerAuth,
-    responses: {
+    responses: withSignedInResponses({
       200: {
         description: 'The account.',
         content: { 'application/json': { schema: accountSchema } },
       },
       401: errorResponse('`AUTHENTICATION_REQUIRED`: nobody is signed in.'),
-    },
+    }),
   });
 
   registry.registerPath({
@@ -37,14 +37,14 @@ export function registerAccountsOpenApi(registry: OpenAPIRegistry, basePath: str
     request: {
       body: { required: true, content: { 'application/json': { schema: accountChangesSchema } } },
     },
-    responses: {
+    responses: withSignedInResponses({
       200: {
         description: 'The account.',
         content: { 'application/json': { schema: accountSchema } },
       },
       400: errorResponse('`VALIDATION_FAILED`: the changes are invalid.'),
       401: errorResponse('`AUTHENTICATION_REQUIRED`: nobody is signed in.'),
-    },
+    }),
   });
 
   registry.registerPath({
@@ -56,12 +56,12 @@ export function registerAccountsOpenApi(registry: OpenAPIRegistry, basePath: str
       'Deletes their identity, then everything kept about them; the Ascents they added stay, without any link to them.',
     tags: ['Accounts'],
     security: bearerAuth,
-    responses: {
+    responses: withSignedInResponses({
       204: { description: 'Deleted.' },
       401: errorResponse('`AUTHENTICATION_REQUIRED`: nobody is signed in.'),
       503: errorResponse(
         '`ACCOUNT_DELETION_UNAVAILABLE`: the identity could not be deleted; nothing was erased.',
       ),
-    },
+    }),
   });
 }

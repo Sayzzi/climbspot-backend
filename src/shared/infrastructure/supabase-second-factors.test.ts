@@ -30,7 +30,14 @@ describe('SupabaseSecondFactors', () => {
 
   it.each([
     ['no factor', { id: VISITOR }],
-    ['only an unverified factor', { id: VISITOR, factors: [{ status: 'unverified' }] }],
+    [
+      'only an unverified factor',
+      { id: VISITOR, factors: [{ status: 'unverified', factor_type: 'totp' }] },
+    ],
+    [
+      'only another kind of factor',
+      { id: VISITOR, factors: [{ status: 'verified', factor_type: 'phone' }] },
+    ],
   ])('says no for %s', async (_, user) => {
     expect(await factors(() => Response.json(user)).subject.has(VISITOR)).toBe(false);
   });

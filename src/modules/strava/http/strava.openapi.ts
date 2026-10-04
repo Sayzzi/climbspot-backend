@@ -1,7 +1,7 @@
 import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 
 import { apiErrorSchema } from '../../../shared/http/api-error.ts';
-import { bearerAuth } from '../../../shared/http/identity.ts';
+import { bearerAuth, withSignedInResponses } from '../../../shared/http/identity.ts';
 import {
   authorizationSchema,
   connectionRequestSchema,
@@ -29,13 +29,13 @@ export function registerStravaOpenApi(registry: OpenAPIRegistry, basePath: strin
       'Strava sends the Visitor back to the frontend with a code and this state, for `POST /strava/connection`.',
     tags: ['Strava'],
     security: bearerAuth,
-    responses: {
+    responses: withSignedInResponses({
       200: {
         description: 'Where to send the Visitor.',
         content: { 'application/json': { schema: authorizationSchema } },
       },
       401: signedOut,
-    },
+    }),
   });
 
   registry.registerPath({
@@ -45,7 +45,7 @@ export function registerStravaOpenApi(registry: OpenAPIRegistry, basePath: strin
     summary: "The signed-in Visitor's Strava Connection",
     tags: ['Strava'],
     security: bearerAuth,
-    responses: { 200: connection, 401: signedOut },
+    responses: withSignedInResponses({ 200: connection, 401: signedOut }),
   });
 
   registry.registerPath({
@@ -63,7 +63,7 @@ export function registerStravaOpenApi(registry: OpenAPIRegistry, basePath: strin
         content: { 'application/json': { schema: connectionRequestSchema } },
       },
     },
-    responses: {
+    responses: withSignedInResponses({
       200: connection,
       400: errorResponse('`VALIDATION_FAILED`: the code or state is missing.'),
       401: signedOut,
@@ -71,7 +71,7 @@ export function registerStravaOpenApi(registry: OpenAPIRegistry, basePath: strin
         '`STRAVA_AUTHORIZATION_REFUSED`: Strava refused the code, or the state is not the Visitor’s.',
       ),
       503: errorResponse('`STRAVA_UNAVAILABLE`: Strava is down or its limits are reached.'),
-    },
+    }),
   });
 
   registry.registerPath({
@@ -83,7 +83,7 @@ export function registerStravaOpenApi(registry: OpenAPIRegistry, basePath: strin
       'Runs and trail runs only. Stopping at Strava’s limits keeps what was imported; the next synchronisation carries on.',
     tags: ['Strava'],
     security: bearerAuth,
-    responses: {
+    responses: withSignedInResponses({
       200: connection,
       401: signedOut,
       409: errorResponse(
@@ -92,7 +92,7 @@ export function registerStravaOpenApi(registry: OpenAPIRegistry, basePath: strin
       503: errorResponse(
         '`STRAVA_UNAVAILABLE`: Strava is down or its limits are reached; what was imported stays.',
       ),
-    },
+    }),
   });
 
   registry.registerPath({
@@ -104,6 +104,6 @@ export function registerStravaOpenApi(registry: OpenAPIRegistry, basePath: strin
       'Withdraws ClimbSpot’s access at Strava when Strava can be reached, and erases everything kept from Strava.',
     tags: ['Strava'],
     security: bearerAuth,
-    responses: { 204: { description: 'Ended.' }, 401: signedOut },
+    responses: withSignedInResponses({ 204: { description: 'Ended.' }, 401: signedOut }),
   });
 }

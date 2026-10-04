@@ -2,7 +2,7 @@ import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import { z } from 'zod';
 
 import { apiErrorSchema } from '../../../shared/http/api-error.ts';
-import { bearerAuth } from '../../../shared/http/identity.ts';
+import { bearerAuth, withSignedInResponses } from '../../../shared/http/identity.ts';
 import {
   newSavedItinerarySchema,
   savedItinerariesSchema,
@@ -33,12 +33,12 @@ export function registerSavedItinerariesOpenApi(registry: OpenAPIRegistry, baseP
     summary: 'Keep a proposal as a Saved Itinerary',
     description: 'A frozen copy of a Loop, Uphill Itinerary or Hill Session, as proposed.',
     request: { body: { required: true, ...json(newSavedItinerarySchema) } },
-    responses: {
+    responses: withSignedInResponses({
       201: { description: 'The Saved Itinerary.', ...json(savedItinerarySchema) },
       400: errorResponse('`VALIDATION_FAILED`: the name or the proposal is invalid.'),
       401: unauthorized,
       413: errorResponse('`SAVED_ITINERARY_TOO_LARGE`: the proposal is too large to keep.'),
-    },
+    }),
   });
 
   registry.registerPath({
@@ -47,10 +47,10 @@ export function registerSavedItinerariesOpenApi(registry: OpenAPIRegistry, baseP
     path: basePath,
     operationId: 'listSavedItineraries',
     summary: "The signed-in Visitor's Saved Itineraries, newest first",
-    responses: {
+    responses: withSignedInResponses({
       200: { description: 'Their summaries.', ...json(savedItinerariesSchema) },
       401: unauthorized,
-    },
+    }),
   });
 
   registry.registerPath({
@@ -60,11 +60,11 @@ export function registerSavedItinerariesOpenApi(registry: OpenAPIRegistry, baseP
     operationId: 'getSavedItinerary',
     summary: 'A Saved Itinerary with its proposal',
     request: idParameter,
-    responses: {
+    responses: withSignedInResponses({
       200: { description: 'The Saved Itinerary.', ...json(savedItinerarySchema) },
       401: unauthorized,
       404: notFound,
-    },
+    }),
   });
 
   registry.registerPath({
@@ -74,12 +74,12 @@ export function registerSavedItinerariesOpenApi(registry: OpenAPIRegistry, baseP
     operationId: 'renameSavedItinerary',
     summary: 'Rename a Saved Itinerary',
     request: { ...idParameter, body: { required: true, ...json(savedItineraryChangesSchema) } },
-    responses: {
+    responses: withSignedInResponses({
       200: { description: 'The Saved Itinerary.', ...json(savedItinerarySchema) },
       400: errorResponse('`VALIDATION_FAILED`: the name is invalid.'),
       401: unauthorized,
       404: notFound,
-    },
+    }),
   });
 
   registry.registerPath({
@@ -89,6 +89,10 @@ export function registerSavedItinerariesOpenApi(registry: OpenAPIRegistry, baseP
     operationId: 'deleteSavedItinerary',
     summary: 'Delete a Saved Itinerary',
     request: idParameter,
-    responses: { 204: { description: 'Deleted.' }, 401: unauthorized, 404: notFound },
+    responses: withSignedInResponses({
+      204: { description: 'Deleted.' },
+      401: unauthorized,
+      404: notFound,
+    }),
   });
 }

@@ -3,7 +3,7 @@ import { pino } from 'pino';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 
 import { createApp } from '../src/app.ts';
-import type { SecondFactors } from '../src/shared/http/identity.ts';
+import type { SecondFactors } from '../src/shared/domain/identity.ts';
 import type { AccountDirectory } from '../src/modules/accounts/domain/account-directory.ts';
 import { createAccountsModule, type VisitorDataEraserFor } from '../src/modules/accounts/index.ts';
 import { createAscentsModule, forgetContributor } from '../src/modules/ascents/index.ts';

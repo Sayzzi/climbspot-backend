@@ -1,5 +1,8 @@
 import type { RequestHandler, Response } from 'express';
 
+import { apiErrorSchema } from './api-error.ts';
+
+import type { DomainError } from '../domain/domain-error.ts';
 import {
   AuthenticationRequiredError,
   AuthenticationUnavailableError,
@@ -11,9 +14,6 @@ import {
 } from '../domain/identity.ts';
 
 export { nobodySignedIn, type IdentityVerifier, type SecondFactors };
-
-/** Why a request carrying a valid token still has no signed-in Visitor. */
-type Withheld = 'second-factor-required' | 'unavailable';
 
 /**
  * Recognises the signed-in Visitor of each request from its bearer token, if any. With
@@ -40,18 +40,21 @@ export function identify(
   };
 }
 
+/** Why a session proven by its token still counts as nobody, if it does. */
 async function withheldFor(
   identity: Identity,
   secondFactors: SecondFactors | undefined,
-): Promise<Withheld | undefined> {
+): Promise<DomainError | undefined> {
   if (!secondFactors || identity.assurance === 'aal2') {
     return undefined;
   }
   try {
-    return (await secondFactors.has(identity.visitorId)) ? 'second-factor-required' : undefined;
-  } catch {
+    return (await secondFactors.has(identity.visitorId))
+      ? new SecondFactorRequiredError()
+      : undefined;
+  } catch (error) {
     // A second factor that switches off when Supabase fails would be none.
-    return 'unavailable';
+    return new AuthenticationUnavailableError({ cause: error });
   }
 }
 
@@ -72,18 +75,42 @@ export function signedInVisitor(res: Response): Identity {
   if (identity) {
     return identity;
   }
-  switch (res.locals.withheld as Withheld | undefined) {
-    case 'second-factor-required':
-      throw new SecondFactorRequiredError();
-    case 'unavailable':
-      throw new AuthenticationUnavailableError();
-    case undefined:
-      throw new AuthenticationRequiredError();
-  }
+  throw (res.locals.withheld as DomainError | undefined) ?? new AuthenticationRequiredError();
 }
 
 /** OpenAPI security requirement of endpoints that need a signed-in Visitor. */
 export const bearerAuth = [{ bearerAuth: [] }];
+
+const SECOND_FACTOR_REQUIRED =
+  '`SECOND_FACTOR_REQUIRED`: the Visitor has a second factor, and this session has not given its code.';
+const AUTHENTICATION_UNAVAILABLE =
+  '`AUTHENTICATION_UNAVAILABLE`: whether the Visitor has a second factor cannot be told right now.';
+
+interface OpenApiResponse {
+  readonly description: string;
+  readonly content?: unknown;
+}
+
+/**
+ * A route's OpenAPI responses, with what any route needing a signed-in Visitor may also
+ * answer: a session without the second factor's code (401), or one that cannot be
+ * checked (503).
+ */
+export function withSignedInResponses<R extends Record<number, OpenApiResponse>>(responses: R): R {
+  const add = (code: 401 | 503, description: string) => {
+    const existing = responses[code];
+    return {
+      content: { 'application/json': { schema: apiErrorSchema } },
+      ...existing,
+      description: existing ? `${existing.description} ${description}` : description,
+    };
+  };
+  return {
+    ...responses,
+    401: add(401, SECOND_FACTOR_REQUIRED),
+    503: add(503, AUTHENTICATION_UNAVAILABLE),
+  };
+}
 
 /** How the bearer scheme is described in the OpenAPI document. */
 export const bearerAuthDescription = [

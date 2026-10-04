@@ -1,35 +1,21 @@
 import { z } from 'zod';
 
 import type { SecondFactors } from '../domain/identity.ts';
-
-export interface SupabaseSecondFactorsOptions {
-  readonly projectUrl: string;
-  /** Secret service-role key; held by the API only, never sent to browsers. */
-  readonly serviceRoleKey: string;
-  readonly fetch?: typeof fetch;
-}
+import { requestUser, type SupabaseAdmin } from './supabase-admin.ts';
 
 const userSchema = z.object({
-  factors: z.array(z.object({ status: z.string() })).nullish(),
+  factors: z.array(z.object({ factor_type: z.string(), status: z.string() })).nullish(),
 });
 
-/** Tells who has a verified second factor through Supabase Auth's admin API (ADR 0009). */
+/**
+ * Tells who has a verified second factor through Supabase Auth's admin API (ADR 0009):
+ * an authenticator app (TOTP), the only kind ClimbSpot asks for.
+ */
 export class SupabaseSecondFactors implements SecondFactors {
-  private readonly fetch: typeof fetch;
-
-  constructor(private readonly options: SupabaseSecondFactorsOptions) {
-    this.fetch = options.fetch ?? fetch;
-  }
+  constructor(private readonly admin: SupabaseAdmin) {}
 
   async has(visitorId: string): Promise<boolean> {
-    const { projectUrl, serviceRoleKey } = this.options;
-    const response = await this.fetch(
-      `${projectUrl.replace(/\/$/, '')}/auth/v1/admin/users/${encodeURIComponent(visitorId)}`,
-      {
-        headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
-        signal: AbortSignal.timeout(5_000),
-      },
-    );
+    const response = await requestUser(this.admin, visitorId);
     // A user gone has no factor left to give.
     if (response.status === 404) {
       return false;
@@ -38,6 +24,8 @@ export class SupabaseSecondFactors implements SecondFactors {
       throw new Error(`Supabase answered HTTP ${String(response.status)} reading a user`);
     }
     const { factors } = userSchema.parse(await response.json());
-    return (factors ?? []).some((factor) => factor.status === 'verified');
+    return (factors ?? []).some(
+      (factor) => factor.factor_type === 'totp' && factor.status === 'verified',
+    );
   }
 }
