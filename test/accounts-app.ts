@@ -3,6 +3,7 @@ import { pino } from 'pino';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 
 import { createApp } from '../src/app.ts';
+import type { SecondFactors } from '../src/shared/http/identity.ts';
 import type { AccountDirectory } from '../src/modules/accounts/domain/account-directory.ts';
 import { createAccountsModule, type VisitorDataEraserFor } from '../src/modules/accounts/index.ts';
 import { createAscentsModule, forgetContributor } from '../src/modules/ascents/index.ts';
@@ -36,6 +37,8 @@ export function fakeAccountDirectory({ failing = false } = {}) {
 
 export interface AccountsAppOptions {
   readonly directory?: AccountDirectory;
+  /** Who has a second factor; nobody is checked by default. */
+  readonly secondFactors?: SecondFactors;
   /** More to erase with an account, after the Ascents and Saved Itineraries. */
   readonly alsoErase?: readonly VisitorDataEraserFor[];
 }
@@ -70,11 +73,13 @@ export function useAccountsApp(): AccountsApp {
   const build = ({
     directory = fakeAccountDirectory().directory,
     alsoErase = [],
+    secondFactors,
   }: AccountsAppOptions = {}) =>
     createApp({
       logger: pino({ level: 'silent' }),
       corsOrigins: [],
       identityVerifier: fakeIdentityVerifier,
+      ...(secondFactors && { secondFactors }),
       modules: [
         createAccountsModule({
           db: connection.db,

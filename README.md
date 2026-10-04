@@ -60,7 +60,7 @@ Requests outside those areas find no way. To cover another area, add it to `rout
 
 ### Accounts
 
-Visitors sign in with Supabase Auth in the browser; the API only verifies their tokens against the project's public keys ([ADR 0009](./docs/adr/0009-accounts-are-supabase-identities-verified-by-the-api.md)). Set `SUPABASE_URL` in `.env`. Deleting an account also deletes its Supabase user, which needs `SUPABASE_SERVICE_ROLE_KEY` (Project Settings > API keys); without it, deleting answers 503 and erases nothing.
+Visitors sign in with Supabase Auth in the browser; the API only verifies their tokens against the project's public keys ([ADR 0009](./docs/adr/0009-accounts-are-supabase-identities-verified-by-the-api.md)). Set `SUPABASE_URL` in `.env`. Deleting an account also deletes its Supabase user, which needs `SUPABASE_SERVICE_ROLE_KEY` (Project Settings > API keys); without it, deleting answers 503 and erases nothing. The same key lets the API tell which Visitors have a second factor: their sessions that have not given its code answer 401 `SECOND_FACTOR_REQUIRED`; without the key, that check is off and the API warns as it starts.
 
 Signing in is set up once, by hand, in the Supabase dashboard:
 

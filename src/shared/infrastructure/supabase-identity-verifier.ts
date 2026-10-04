@@ -11,6 +11,8 @@ export interface SupabaseIdentityVerifierOptions {
 
 interface SupabaseClaims {
   readonly email?: string;
+  /** Authenticator assurance level: `aal2` once the session gave a second factor's code. */
+  readonly aal?: string;
   readonly user_metadata?: { readonly full_name?: string; readonly name?: string };
 }
 
@@ -38,6 +40,7 @@ export class SupabaseIdentityVerifier implements IdentityVerifier {
         visitorId: payload.sub,
         ...(payload.email && { email: payload.email }),
         ...(name && { name }),
+        assurance: payload.aal === 'aal2' ? 'aal2' : 'aal1',
       };
     } catch {
       // Expired, forged or malformed: nobody is signed in.

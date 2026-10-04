@@ -1,4 +1,4 @@
-import type { Identity, IdentityVerifier } from '../src/shared/domain/identity.ts';
+import type { Identity, IdentityVerifier, SecondFactors } from '../src/shared/domain/identity.ts';
 
 /** Signed-in Visitors the tests act as. */
 export const VISITOR_A: Identity = {
@@ -26,3 +26,29 @@ export const fakeIdentityVerifier: IdentityVerifier = {
         : undefined,
     ),
 };
+
+/**
+ * Who has a second factor, as Supabase would say; `failing` stands for Supabase being
+ * unreachable. Counts the questions asked.
+ */
+export function fakeSecondFactors({
+  protectedVisitors = [] as readonly Identity[],
+  failing = false,
+} = {}) {
+  const asked: string[] = [];
+  const secondFactors: SecondFactors = {
+    has: (visitorId) => {
+      asked.push(visitorId);
+      return failing
+        ? Promise.reject(new Error('Supabase is down'))
+        : Promise.resolve(protectedVisitors.some((visitor) => visitor.visitorId === visitorId));
+    },
+  };
+  return { secondFactors, asked };
+}
+
+/** The same Visitor, once their session gave the second factor's code. */
+export const withSecondFactor = (visitor: Identity): Identity => ({
+  ...visitor,
+  assurance: 'aal2',
+});

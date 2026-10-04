@@ -32,7 +32,9 @@ import {
 import { loadEnv } from './shared/config/env.ts';
 import { createDatabase } from './shared/infrastructure/database.ts';
 import { createLogger } from './shared/infrastructure/logger.ts';
+import { rememberedSecondFactors } from './shared/infrastructure/remembered-second-factors.ts';
 import { SupabaseIdentityVerifier } from './shared/infrastructure/supabase-identity-verifier.ts';
+import { SupabaseSecondFactors } from './shared/infrastructure/supabase-second-factors.ts';
 
 // Composition root: the only place where concrete implementations are chosen and wired together.
 const env = loadEnv();
@@ -60,10 +62,24 @@ const strava: StravaSettings =
       }
     : { gateway: unavailableStrava, tokenKey: randomBytes(32).toString('base64') };
 
+// Without the service-role key, nobody can be checked for a second factor (ADR 0009).
+const secondFactors = env.SUPABASE_SERVICE_ROLE_KEY
+  ? rememberedSecondFactors(
+      new SupabaseSecondFactors({
+        projectUrl: env.SUPABASE_URL,
+        serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+      }),
+    )
+  : undefined;
+if (!secondFactors) {
+  logger.warn('SUPABASE_SERVICE_ROLE_KEY is not set: second factors are not required by the API');
+}
+
 const app = createApp({
   logger,
   corsOrigins: env.CORS_ORIGINS,
   identityVerifier: new SupabaseIdentityVerifier({ projectUrl: env.SUPABASE_URL }),
+  ...(secondFactors && { secondFactors }),
   modules: [
     createHealthModule(),
     createAccountsModule({

@@ -2,6 +2,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 
 import { apiErrorSchema } from './api-error.ts';
 import type { HttpModule } from './http-module.ts';
+import { bearerAuthDescription } from './identity.ts';
 
 type OpenApiDefinition = OpenAPIRegistry['definitions'][number];
 
@@ -20,7 +21,7 @@ export function buildOpenApiDocument(modules: readonly HttpModule[]): OpenApiDoc
     type: 'http',
     scheme: 'bearer',
     bearerFormat: 'JWT',
-    description: 'Supabase Auth access token of the signed-in Visitor (ADR 0009).',
+    description: bearerAuthDescription,
   });
 
   for (const module of modules) {

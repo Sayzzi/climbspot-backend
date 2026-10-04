@@ -54,7 +54,17 @@ describe('SupabaseIdentityVerifier', () => {
       visitorId: VISITOR,
       email: 'ada@example.com',
       name: 'Ada Lovelace',
+      assurance: 'aal1',
     });
+  });
+
+  it('tells whether the session gave a second factor’s code', async () => {
+    await expect(
+      verifier().verify(await token({ claims: { email: 'ada@example.com', aal: 'aal2' } })),
+    ).resolves.toMatchObject({ assurance: 'aal2' });
+    await expect(
+      verifier().verify(await token({ claims: { email: 'ada@example.com', aal: 'aal1' } })),
+    ).resolves.toMatchObject({ assurance: 'aal1' });
   });
 
   it('takes the name from the identity provider, or leaves it out', async () => {
@@ -65,7 +75,7 @@ describe('SupabaseIdentityVerifier', () => {
     ).resolves.toMatchObject({ name: 'Ada' });
     await expect(
       verifier().verify(await token({ claims: { email: 'ada@example.com' } })),
-    ).resolves.toEqual({ visitorId: VISITOR, email: 'ada@example.com' });
+    ).resolves.toEqual({ visitorId: VISITOR, email: 'ada@example.com', assurance: 'aal1' });
   });
 
   it('recognises nobody from a token signed by another key', async () => {

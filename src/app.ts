@@ -5,7 +5,12 @@ import { pinoHttp } from 'pino-http';
 
 import { errorHandler } from './shared/http/error-handler.ts';
 import type { HttpModule } from './shared/http/http-module.ts';
-import { identify, nobodySignedIn, type IdentityVerifier } from './shared/http/identity.ts';
+import {
+  identify,
+  nobodySignedIn,
+  type IdentityVerifier,
+  type SecondFactors,
+} from './shared/http/identity.ts';
 import { notFoundHandler } from './shared/http/not-found-handler.ts';
 import { buildOpenApiDocument } from './shared/http/openapi.ts';
 import type { Logger } from './shared/infrastructure/logger.ts';
@@ -16,6 +21,8 @@ export interface AppDependencies {
   readonly modules: readonly HttpModule[];
   /** Tells signed-in Visitors from their access tokens; by default nobody is signed in. */
   readonly identityVerifier?: IdentityVerifier;
+  /** Who has a second factor; without it, sessions are not checked for one. */
+  readonly secondFactors?: SecondFactors;
 }
 
 /**
@@ -27,6 +34,7 @@ export function createApp({
   corsOrigins,
   modules,
   identityVerifier = nobodySignedIn,
+  secondFactors,
 }: AppDependencies): Express {
   const app = express();
   const openApiDocument = buildOpenApiDocument(modules);
@@ -35,7 +43,7 @@ export function createApp({
   app.use(helmet());
   app.use(cors({ origin: [...corsOrigins] }));
   app.use(express.json({ limit: '1mb' }));
-  app.use(identify(identityVerifier));
+  app.use(identify(identityVerifier, secondFactors));
 
   app.get('/openapi.json', (_req, res) => {
     res.json(openApiDocument);
