@@ -65,7 +65,7 @@ Visitors sign in with Supabase Auth in the browser; the API only verifies their 
 Signing in is set up once, by hand, in the Supabase dashboard:
 
 1. **Authentication > URL Configuration**: set the Site URL to the frontend's address and add every frontend origin (e.g. `http://localhost:5173/`) to the Redirect URLs, so that sign-in links and Google bring Visitors back.
-2. **Authentication > Sign In / Providers > Email**: keep it enabled; it sends the magic links.
+2. **Authentication > Sign In / Providers > Email**: keep it enabled (it sends the magic links), with **Confirm email** on and a **minimum password length of 15** (ADR 0009). On the Pro plan, also turn on **Prevent use of leaked passwords**; until then, the frontend checks new passwords against Pwned Passwords.
 3. **Google**: in the Google Cloud console, create an OAuth client of type _Web application_ whose authorised redirect URI is `https://<project-ref>.supabase.co/auth/v1/callback`; then, in **Authentication > Sign In / Providers > Google**, enable it and paste the client ID and secret.
 
 ### Strava
