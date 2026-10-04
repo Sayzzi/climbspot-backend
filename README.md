@@ -68,6 +68,10 @@ Signing in is set up once, by hand, in the Supabase dashboard:
 2. **Authentication > Sign In / Providers > Email**: keep it enabled; it sends the magic links.
 3. **Google**: in the Google Cloud console, create an OAuth client of type _Web application_ whose authorised redirect URI is `https://<project-ref>.supabase.co/auth/v1/callback`; then, in **Authentication > Sign In / Providers > Google**, enable it and paste the client ID and secret.
 
+### Strava
+
+Visitors may connect their Strava account. ClimbSpot needs its own Strava application, created on [strava.com/settings/api](https://www.strava.com/settings/api) with `localhost` as its authorization callback domain; its client id and secret go into `.env` as `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET`, with `STRAVA_TOKEN_KEY` (`openssl rand -base64 32`) encrypting the tokens kept for each Visitor. Without them, connecting answers 503 `STRAVA_UNAVAILABLE`. A new Strava application serves one athlete, ten before Strava reviews it.
+
 ## Architecture
 
 A modular monolith where every business module follows a hexagonal layout ([ADR 0002](./docs/adr/0002-hexagonal-modules-with-manual-injection.md)):

@@ -28,11 +28,34 @@ const envSchema = z
     ORS_URL: z.url().default(HOSTED_OPEN_ROUTE_SERVICE),
     /** Key for the hosted OpenRouteService; a self-hosted one needs none. */
     ORS_API_KEY: z.string().min(1).optional(),
+    /** ClimbSpot's Strava application (strava.com/settings/api); without it, Strava is unavailable. */
+    STRAVA_CLIENT_ID: z.string().min(1).optional(),
+    STRAVA_CLIENT_SECRET: z.string().min(1).optional(),
+    /** 32 random bytes, base64 (`openssl rand -base64 32`): encrypts the stored Strava tokens. */
+    STRAVA_TOKEN_KEY: z
+      .base64()
+      .refine((key) => Buffer.from(key, 'base64').length === 32, '32 bytes, base64-encoded')
+      .optional(),
+    /** The frontend page Strava sends Visitors back to. */
+    STRAVA_REDIRECT_URL: z.url().default('http://localhost:5173/strava/callback'),
   })
   .refine((env) => env.ORS_URL !== HOSTED_OPEN_ROUTE_SERVICE || env.ORS_API_KEY !== undefined, {
     path: ['ORS_API_KEY'],
     message: 'The hosted OpenRouteService needs an API key.',
-  });
+  })
+  .refine(
+    (env) =>
+      [env.STRAVA_CLIENT_ID, env.STRAVA_CLIENT_SECRET, env.STRAVA_TOKEN_KEY].every(
+        (value) => value === undefined,
+      ) ||
+      [env.STRAVA_CLIENT_ID, env.STRAVA_CLIENT_SECRET, env.STRAVA_TOKEN_KEY].every(
+        (value) => value !== undefined,
+      ),
+    {
+      path: ['STRAVA_TOKEN_KEY'],
+      message: 'Strava needs its client id, client secret and token key together.',
+    },
+  );
 
 export type Env = z.infer<typeof envSchema>;
 

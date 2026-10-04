@@ -64,6 +64,13 @@
       "when": 1791041161841,
       "tag": "0008_keep_saved_itineraries",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791105430131,
+      "tag": "0009_keep_strava_connections",
+      "breakpoints": true
     }
   ]
 }
