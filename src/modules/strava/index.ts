@@ -1,14 +1,22 @@
 import type { HttpModule } from '../../shared/http/http-module.ts';
 import type { Database } from '../../shared/infrastructure/database.ts';
+import { AscentTimes } from './application/ascent-times.ts';
 import { StravaConnections } from './application/strava-connections.ts';
+import {
+  emptyCatalogue,
+  type AscentCatalogue,
+  type CatalogueAscent,
+} from './domain/ascent-catalogue.ts';
 import type { StravaGateway } from './domain/strava-gateway.ts';
 import { registerStravaOpenApi } from './http/strava.openapi.ts';
 import { createStravaRouter } from './http/strava.router.ts';
+import { DrizzleAscentTimeRepository } from './infrastructure/persistence/drizzle-ascent-time-repository.ts';
 import { DrizzleRecordedRunRepository } from './infrastructure/persistence/drizzle-recorded-run-repository.ts';
 import { DrizzleStravaConnectionRepository } from './infrastructure/persistence/drizzle-strava-connection-repository.ts';
 import { SignedConnectionStates } from './infrastructure/signed-connection-states.ts';
 import { TokenVault } from './infrastructure/token-vault.ts';
 
+export type { AscentCatalogue, CatalogueAscent } from './domain/ascent-catalogue.ts';
 export type { TrackSample } from './domain/recorded-run.ts';
 export type { StravaGateway, StravaGrant, StravaOuting } from './domain/strava-gateway.ts';
 export {
@@ -27,10 +35,23 @@ export interface StravaSettings {
 
 const basePath = '/strava';
 
-function stravaConnections(db: Database, { gateway, tokenKey }: StravaSettings) {
+function ascentTimes(db: Database, catalogue: AscentCatalogue = emptyCatalogue) {
+  return new AscentTimes({
+    times: new DrizzleAscentTimeRepository(db),
+    runs: new DrizzleRecordedRunRepository(db),
+    catalogue,
+  });
+}
+
+function stravaConnections(
+  db: Database,
+  { gateway, tokenKey }: StravaSettings,
+  catalogue?: AscentCatalogue,
+) {
   return new StravaConnections({
     connections: new DrizzleStravaConnectionRepository(db, new TokenVault(tokenKey)),
     runs: new DrizzleRecordedRunRepository(db),
+    ascentTimes: ascentTimes(db, catalogue),
     gateway,
     states: new SignedConnectionStates(tokenKey),
     now: () => new Date(),
@@ -40,11 +61,16 @@ function stravaConnections(db: Database, { gateway, tokenKey }: StravaSettings) 
 /** The Strava Connection: linking a Visitor's Strava account, importing their Recorded Runs, and ending the link. */
 export function createStravaModule({
   db,
+  catalogue,
   ...settings
-}: StravaSettings & { readonly db: Database }): HttpModule {
+}: StravaSettings & {
+  readonly db: Database;
+  /** The Ascents Recorded Runs may go up. */
+  readonly catalogue: AscentCatalogue;
+}): HttpModule {
   return {
     basePath,
-    router: createStravaRouter(stravaConnections(db, settings)),
+    router: createStravaRouter(stravaConnections(db, settings, catalogue)),
     registerOpenApi: (registry) => {
       registerStravaOpenApi(registry, basePath);
     },
@@ -63,4 +89,24 @@ export function forgetStravaConnection(settings: StravaSettings) {
     const connections = stravaConnections(db, settings);
     return { erase: (visitorId: string) => connections.end(visitorId) };
   };
+}
+
+/** Each Visitor's own Ascent Times, for the Ascents they look at. */
+export function stravaAscentTimes(db: Database) {
+  const times = new DrizzleAscentTimeRepository(db);
+  return {
+    summaries: (visitorId: string, ascentIds: readonly string[]) =>
+      times.summaries(visitorId, ascentIds),
+    of: async (visitorId: string, ascentId: string) =>
+      (await times.of(visitorId, ascentId)).map(({ startedAt, seconds }) => ({
+        startedAt,
+        seconds,
+      })),
+  };
+}
+
+/** Finds, in every stored Recorded Run, the Ascent Times of an Ascent just added. */
+export function matchNewAscent(db: Database) {
+  const times = ascentTimes(db);
+  return (ascent: CatalogueAscent) => times.onAscent(ascent);
 }

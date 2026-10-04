@@ -3,6 +3,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../../../../shared/infrastructure/database.ts';
 import type {
   AscentRepository,
+  Bounds,
   NearbyAscent,
   NearbyCriteria,
 } from '../../domain/ascent-repository.ts';
@@ -95,6 +96,15 @@ export class DrizzleAscentRepository implements AscentRepository {
   async findById(id: string): Promise<Ascent | undefined> {
     const [row] = await this.db.select(ascentColumns).from(ascents).where(eq(ascents.id, id));
     return row && toAscent(row);
+  }
+
+  async findStartingWithin({ south, west, north, east }: Bounds) {
+    const box = sql`extensions.st_makeenvelope(${west}, ${south}, ${east}, ${north}, 4326)::extensions.geography`;
+    const rows = await this.db
+      .select({ id: ascents.id, path: ascentColumns.path })
+      .from(ascents)
+      .where(sql`extensions.st_intersects(${ascents.start}, ${box})`);
+    return rows.map((row) => ({ id: row.id, path: positionsOf(row.path) }));
   }
 
   async findNearby({

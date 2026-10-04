@@ -5,6 +5,7 @@ import {
   SMOOTHING_WINDOW,
 } from '../../../shared/domain/survey/survey-rules.ts';
 import type { AscentRepository } from '../domain/ascent-repository.ts';
+import type { AscentAddedListener } from '../domain/personal-ascent-times.ts';
 import { createAscent, type Ascent } from '../domain/ascent.ts';
 import type { ElevationProvider } from '../domain/elevation-provider.ts';
 import { buildProfile, smooth } from '../../../shared/domain/survey/elevation-profile.ts';
@@ -26,6 +27,7 @@ export interface CreateAscentDependencies {
   readonly elevationProvider: ElevationProvider;
   readonly newId: () => string;
   readonly now: () => Date;
+  readonly onAscentAdded: AscentAddedListener;
 }
 
 /** Surveys a path on the terrain model and catalogues it as an Ascent (ADR 0005). */
@@ -54,6 +56,11 @@ export class CreateAscent {
     });
 
     await repository.save(ascent);
+    try {
+      await this.dependencies.onAscentAdded(ascent);
+    } catch {
+      // The Ascent is catalogued; Ascent Times missed now are a lesser loss than failing it.
+    }
     return ascent;
   }
 }

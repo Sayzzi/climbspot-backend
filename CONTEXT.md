@@ -134,10 +134,6 @@ _Avoid_: User, Member, Author
 A frozen copy of a proposal (an Itinerary or a Hill Session) that a signed-in Visitor keeps, as it was when proposed.
 _Avoid_: Favourite, Bookmark, Route
 
-## Reserved for later
-
-Climbing sites will arrive as their own concepts (**Crag**, **Gym**, **Route**, **Boulder**). "Climb" is never used for any of them, nor for an Ascent.
-
 ### Strava
 
 **Strava Connection**:
@@ -151,3 +147,7 @@ _Avoid_: Activity (an Activity is a way of travelling), Workout, Session
 **Ascent Time**:
 How long a Visitor took from the Start to the Top of an Ascent during a Recorded Run, following its path. Only its owner ever sees it.
 _Avoid_: Effort, Segment time, Split
+
+## Reserved for later
+
+Climbing sites will arrive as their own concepts (**Crag**, **Gym**, **Route**, **Boulder**). "Climb" is never used for any of them, nor for an Ascent.

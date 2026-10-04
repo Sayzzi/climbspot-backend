@@ -2,11 +2,12 @@ import { Router, type RequestHandler } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 
-import { signedInVisitor } from '../../../shared/http/identity.ts';
+import { signedInVisitor, visitorOf } from '../../../shared/http/identity.ts';
 import { RequestValidationError } from '../../../shared/http/request-validation-error.ts';
 import type { CreateAscent } from '../application/create-ascent.ts';
 import type { FindAscentsNearby } from '../application/find-ascents-nearby.ts';
 import type { GetAscent } from '../application/get-ascent.ts';
+import type { GetMyAscentTimes } from '../application/get-my-ascent-times.ts';
 import { GpxTooLargeError } from '../domain/ascent-errors.ts';
 import { MAXIMUM_GPX_FILE_SIZE } from '../domain/ascent-rules.ts';
 import type { PathReader } from '../domain/path-reader.ts';
@@ -21,6 +22,7 @@ export interface AscentsRouterDependencies {
   readonly createAscent: CreateAscent;
   readonly getAscent: GetAscent;
   readonly findAscentsNearby: FindAscentsNearby;
+  readonly getMyAscentTimes: GetMyAscentTimes;
   readonly readGpxPath: PathReader;
 }
 
@@ -32,6 +34,7 @@ export function createAscentsRouter({
   createAscent,
   getAscent,
   findAscentsNearby,
+  getMyAscentTimes,
   readGpxPath,
 }: AscentsRouterDependencies): Router {
   const router = Router();
@@ -65,13 +68,16 @@ export function createAscentsRouter({
       }),
     );
 
-    const results = await findAscentsNearby.execute({
-      position: { latitude, longitude },
-      radius,
-      limit,
-      activities: activity,
-      categories: category,
-    });
+    const results = await findAscentsNearby.execute(
+      {
+        position: { latitude, longitude },
+        radius,
+        limit,
+        activities: activity,
+        categories: category,
+      },
+      visitorOf(res)?.visitorId,
+    );
 
     res.json(toNearbyAscentsResponse(results));
   });
@@ -80,6 +86,19 @@ export function createAscentsRouter({
     const { id } = ascentIdParamsSchema.parse(req.params);
 
     res.json(toAscentResponse(await getAscent.execute(id)));
+  });
+
+  router.get('/:id/my-times', async (req, res) => {
+    const { visitorId } = signedInVisitor(res);
+    const { id } = ascentIdParamsSchema.parse(req.params);
+
+    const times = await getMyAscentTimes.execute(visitorId, id);
+    res.json({
+      ascentTimes: times.map(({ startedAt, seconds }) => ({
+        startedAt: startedAt.toISOString(),
+        seconds,
+      })),
+    });
   });
 
   return router;

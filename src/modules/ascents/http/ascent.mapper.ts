@@ -1,6 +1,6 @@
 import { toEffortResponse } from '../../../shared/http/effort.ts';
 import { activitiesFor, canBeRun } from '../domain/activity.ts';
-import type { NearbyAscent } from '../domain/ascent-repository.ts';
+import type { NearbyAscentResult } from '../application/find-ascents-nearby.ts';
 import { summarize, type Ascent, type AscentPoint, type AscentSummary } from '../domain/ascent.ts';
 import type {
   AscentResponse,
@@ -61,11 +61,14 @@ export function toAscentResponse(ascent: Ascent): AscentResponse {
   };
 }
 
-export function toNearbyAscentsResponse(results: readonly NearbyAscent[]): NearbyAscentsResponse {
+export function toNearbyAscentsResponse(
+  results: readonly NearbyAscentResult[],
+): NearbyAscentsResponse {
   return {
-    ascents: results.map(({ ascent, distanceToStart }) => ({
+    ascents: results.map(({ ascent, distanceToStart, myAscentTimes }) => ({
       ...toAscentSummaryResponse(ascent),
       distanceToStart: round(distanceToStart, 1),
+      ...(myAscentTimes && { myAscentTimes }),
     })),
   };
 }

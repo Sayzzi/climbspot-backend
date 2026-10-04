@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 
 import { createApp } from './app.ts';
 import {
+  ascentCatalogue,
   createAscentsModule,
   forgetContributor,
   OpenMeteoElevationProvider,
@@ -21,6 +22,8 @@ import {
 import {
   createStravaModule,
   forgetStravaConnection,
+  matchNewAscent,
+  stravaAscentTimes,
   stravaFlatPace,
   StravaApiGateway,
   unavailableStrava,
@@ -70,10 +73,12 @@ const app = createApp({
       stravaFlatPace: stravaFlatPace({ db: database.db, ...strava }),
     }),
     createSavedItinerariesModule({ db: database.db }),
-    createStravaModule({ db: database.db, ...strava }),
+    createStravaModule({ db: database.db, ...strava, catalogue: ascentCatalogue(database.db) }),
     createAscentsModule({
       db: database.db,
       elevationProvider: new OpenMeteoElevationProvider({ baseUrl: env.ELEVATION_API_URL }),
+      ascentTimes: stravaAscentTimes(database.db),
+      onAscentAdded: matchNewAscent(database.db),
     }),
     createItinerariesModule({
       routingProvider: new OpenRouteServiceRoutingProvider({

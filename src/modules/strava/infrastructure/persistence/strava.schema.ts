@@ -1,5 +1,6 @@
 import {
   bigint,
+  integer,
   doublePrecision,
   index,
   jsonb,
@@ -37,9 +38,29 @@ export const recordedRuns = pgTable(
     distance: doublePrecision().notNull(),
     movingTime: doublePrecision('moving_time').notNull(),
     track: jsonb().$type<readonly TrackPoint[]>().notNull(),
+    /** The box around the track, widened by the Ascent Time radius; none without a track. */
+    south: doublePrecision(),
+    west: doublePrecision(),
+    north: doublePrecision(),
+    east: doublePrecision(),
   },
   (table) => [
     primaryKey({ columns: [table.visitorId, table.stravaId] }),
     index('recorded_runs_visitor_idx').on(table.visitorId, table.startedAt),
+  ],
+);
+
+/** Ascent Times, each Visitor's own. */
+export const ascentTimes = pgTable(
+  'ascent_times',
+  {
+    visitorId: uuid('visitor_id').notNull(),
+    ascentId: uuid('ascent_id').notNull(),
+    stravaId: bigint('strava_id', { mode: 'number' }).notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    seconds: integer().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.visitorId, table.ascentId, table.stravaId, table.startedAt] }),
   ],
 );

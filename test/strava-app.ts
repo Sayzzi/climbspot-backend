@@ -5,9 +5,12 @@ import { afterAll, beforeAll, beforeEach } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import { createAccountsModule } from '../src/modules/accounts/index.ts';
+import { ascentCatalogue, createAscentsModule } from '../src/modules/ascents/index.ts';
 import {
   createStravaModule,
   forgetStravaConnection,
+  matchNewAscent,
+  stravaAscentTimes,
   stravaFlatPace,
   type StravaGateway,
 } from '../src/modules/strava/index.ts';
@@ -21,6 +24,7 @@ import { createTestDatabase, type TestDatabase } from './database.ts';
 import type { Identity } from '../src/shared/domain/identity.ts';
 import { fakeIdentityVerifier, tokenFor } from './identity.ts';
 import { fakeStrava, STRAVA_CODES } from './strava.ts';
+import { uniformGradient } from './terrain.ts';
 
 /** The key test tokens are encrypted with: 32 bytes, base64. */
 export const TEST_TOKEN_KEY = Buffer.alloc(32, 7).toString('base64');
@@ -32,8 +36,8 @@ export interface StravaApp {
 }
 
 /**
- * Its own migrated database per test file, and the app with the Strava Connection and
- * the account deletion that ends it.
+ * Its own migrated database per test file, and the app with the Strava Connection, the
+ * Ascents its Recorded Runs went up, and the account deletion that ends it.
  */
 export function useStravaApp(): StravaApp {
   let testDatabase: TestDatabase;
@@ -53,12 +57,19 @@ export function useStravaApp(): StravaApp {
 
   const build = ({ gateway = fakeStrava().gateway }: { gateway?: StravaGateway } = {}) => {
     const strava = { gateway, tokenKey: TEST_TOKEN_KEY };
+    const db = connection.db;
     return createApp({
       logger: pino({ level: 'silent' }),
       corsOrigins: [],
       identityVerifier: fakeIdentityVerifier,
       modules: [
-        createStravaModule({ db: connection.db, ...strava }),
+        createStravaModule({ db, ...strava, catalogue: ascentCatalogue(db) }),
+        createAscentsModule({
+          db,
+          elevationProvider: uniformGradient(0.08),
+          ascentTimes: stravaAscentTimes(db),
+          onAscentAdded: matchNewAscent(db),
+        }),
         createAccountsModule({
           db: connection.db,
           directory: fakeAccountDirectory().directory,

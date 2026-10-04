@@ -109,10 +109,31 @@ export const nearbyAscentsSchema = z
     ascents: z.array(
       ascentSummarySchema.extend({
         distanceToStart: metres('Geodesic distance from the searched position to the Start'),
+        myAscentTimes: z
+          .object({
+            best: z.int().meta({ description: 'Seconds.' }),
+            count: z.int().positive(),
+          })
+          .optional()
+          .meta({
+            description:
+              "The signed-in Visitor's best Ascent Time here and how many they have; only for them, and only when they have one.",
+          }),
       }),
     ),
   })
   .meta({ id: 'NearbyAscents' });
+
+export const myAscentTimesSchema = z
+  .object({
+    ascentTimes: z.array(
+      z.object({
+        startedAt: z.iso.datetime().meta({ description: 'When the Visitor left the Start.' }),
+        seconds: z.int(),
+      }),
+    ),
+  })
+  .meta({ id: 'MyAscentTimes' });
 
 export type NearbyAscentsResponse = z.infer<typeof nearbyAscentsSchema>;
 

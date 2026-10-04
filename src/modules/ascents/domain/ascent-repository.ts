@@ -21,11 +21,21 @@ export interface NearbyAscent {
   readonly distanceToStart: number;
 }
 
+/** A latitude and longitude box. */
+export interface Bounds {
+  readonly south: number;
+  readonly west: number;
+  readonly north: number;
+  readonly east: number;
+}
+
 export interface AscentRepository {
   save(ascent: Ascent): Promise<void>;
   findById(id: string): Promise<Ascent | undefined>;
   /** Ascents whose Start is within the radius, nearest first. */
   findNearby(criteria: NearbyCriteria): Promise<NearbyAscent[]>;
+  /** The id and path of the Ascents whose Start lies within the box. */
+  findStartingWithin(bounds: Bounds): Promise<Pick<Ascent, 'id' | 'path'>[]>;
   /** Forgets who added the Ascents a Visitor contributed; the Ascents stay. */
   forgetContributor(visitorId: string): Promise<void>;
 }

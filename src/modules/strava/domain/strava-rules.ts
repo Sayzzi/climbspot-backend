@@ -20,3 +20,9 @@ export const FLAT_GRADIENT_LIMIT = 0.01;
 
 /** Fewest metres of flat stretches a Flat Pace is worked out from; below, there is none. */
 export const MINIMUM_FLAT_DISTANCE = 10_000;
+
+/** Metres a Recorded Run must come within of an Ascent's Start, checkpoints and Top. */
+export const ASCENT_TIME_RADIUS = 30;
+
+/** Where, along an Ascent's path, a Recorded Run must pass in order between Start and Top. */
+export const ASCENT_CHECKPOINTS: readonly number[] = [0.25, 0.5, 0.75];

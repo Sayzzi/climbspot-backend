@@ -1,4 +1,5 @@
 import type { ConnectionStates } from '../domain/connection-states.ts';
+import type { AscentTimes } from './ascent-times.ts';
 import { flatPaceFrom } from '../domain/flat-pace.ts';
 import { firstImportStart, isRecordedRunSport, toTrack } from '../domain/recorded-run.ts';
 import type { RecordedRunRepository } from '../domain/recorded-run-repository.ts';
@@ -18,6 +19,7 @@ const REFRESH_MARGIN_MS = 5 * 60 * 1000;
 export interface StravaConnectionsDependencies {
   readonly connections: StravaConnectionRepository;
   readonly runs: RecordedRunRepository;
+  readonly ascentTimes: AscentTimes;
   readonly gateway: StravaGateway;
   readonly states: ConnectionStates;
   readonly now: () => Date;
@@ -57,6 +59,7 @@ export class StravaConnections {
     // Another athlete's Recorded Runs are not this one's.
     const previous = await connections.find(visitorId);
     if (previous && previous.athlete.id !== grant.athlete.id) {
+      await this.dependencies.ascentTimes.eraseAllOf(visitorId);
       await runs.deleteAllOf(visitorId);
     }
     const connection: StravaConnection = { visitorId, ...grant, connectedAt: now() };
@@ -102,7 +105,7 @@ export class StravaConnections {
    * on Strava.
    */
   async end(visitorId: string): Promise<void> {
-    const { connections, runs, gateway } = this.dependencies;
+    const { connections, runs, ascentTimes, gateway } = this.dependencies;
     const connection = await connections.find(visitorId);
     if (!connection) {
       return;
@@ -112,6 +115,7 @@ export class StravaConnections {
     } catch {
       // Strava will keep a grant ClimbSpot no longer holds: the Visitor can withdraw it there.
     }
+    await ascentTimes.eraseAllOf(visitorId);
     await runs.deleteAllOf(visitorId);
     await connections.delete(visitorId);
   }
@@ -126,20 +130,22 @@ export class StravaConnections {
    * then works out the Flat Pace again from the last months' ones.
    */
   private async importRuns(connection: StravaConnection): Promise<void> {
-    const { connections, runs, gateway, now } = this.dependencies;
+    const { connections, runs, ascentTimes, gateway, now } = this.dependencies;
     await this.watchingForLoss(connection, async () => {
       const { accessToken } = await this.freshTokens(connection);
       const since = (await runs.latestStart(connection.visitorId)) ?? firstImportStart(now());
       const outings = await gateway.outingsSince(accessToken, since);
       for (const outing of outings.filter((listed) => isRecordedRunSport(listed.sport))) {
-        await runs.save({
+        const run = {
           visitorId: connection.visitorId,
           stravaId: outing.id,
           startedAt: outing.startedAt,
           distance: outing.distance,
           movingTime: outing.movingTime,
           track: toTrack(await gateway.track(accessToken, outing.id)),
-        });
+        };
+        await runs.save(run);
+        await ascentTimes.inRun(run);
       }
     });
     const current = await connections.find(connection.visitorId);

@@ -1,6 +1,8 @@
-import { and, count, eq, gte, max } from 'drizzle-orm';
+import { and, count, eq, gte, lte, max } from 'drizzle-orm';
 
+import type { Position } from '../../../../shared/domain/position.ts';
 import type { Database } from '../../../../shared/infrastructure/database.ts';
+import { boundsOf } from '../../domain/ascent-time.ts';
 import type { RecordedRun, TrackPoint } from '../../domain/recorded-run.ts';
 import type { RecordedRunRepository } from '../../domain/recorded-run-repository.ts';
 import { recordedRuns } from './strava.schema.ts';
@@ -9,7 +11,11 @@ export class DrizzleRecordedRunRepository implements RecordedRunRepository {
   constructor(private readonly db: Database) {}
 
   async save(run: RecordedRun): Promise<void> {
-    await this.db.insert(recordedRuns).values(run).onConflictDoNothing();
+    const bounds = boundsOf(run.track);
+    await this.db
+      .insert(recordedRuns)
+      .values({ ...run, ...bounds })
+      .onConflictDoNothing();
   }
 
   async latestStart(visitorId: string): Promise<Date | undefined> {
@@ -34,6 +40,28 @@ export class DrizzleRecordedRunRepository implements RecordedRunRepository {
       .from(recordedRuns)
       .where(and(eq(recordedRuns.visitorId, visitorId), gte(recordedRuns.startedAt, since)));
     return rows.map((row) => row.track);
+  }
+
+  async passingNear({ latitude, longitude }: Position): Promise<RecordedRun[]> {
+    const rows = await this.db
+      .select()
+      .from(recordedRuns)
+      .where(
+        and(
+          lte(recordedRuns.south, latitude),
+          gte(recordedRuns.north, latitude),
+          lte(recordedRuns.west, longitude),
+          gte(recordedRuns.east, longitude),
+        ),
+      );
+    return rows.map((row) => ({
+      visitorId: row.visitorId,
+      stravaId: row.stravaId,
+      startedAt: row.startedAt,
+      distance: row.distance,
+      movingTime: row.movingTime,
+      track: row.track,
+    }));
   }
 
   async deleteAllOf(visitorId: string): Promise<void> {

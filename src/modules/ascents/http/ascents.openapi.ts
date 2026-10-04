@@ -14,6 +14,7 @@ import {
   ascentIdParamsSchema,
   ascentSchema,
   createAscentBodySchema,
+  myAscentTimesSchema,
   nearbyAscentsSchema,
   nearbyQuerySchema,
 } from './ascent.schemas.ts';
@@ -72,7 +73,10 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
     path: `${basePath}/nearby`,
     operationId: 'findAscentsNearby',
     summary: 'Find the Ascents whose Start is closest to a position',
+    description:
+      "With a signed-in Visitor's token, each Ascent they went up carries their best Ascent Time.",
     tags: ['Ascents'],
+    security: [{}, ...bearerAuth],
     request: { query: nearbyQuerySchema },
     responses: {
       200: {
@@ -96,6 +100,26 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
         content: { 'application/json': { schema: ascentSchema } },
       },
       400: errorResponse('`VALIDATION_FAILED`: the id is not a UUID.'),
+      404: errorResponse('`ASCENT_NOT_FOUND`: no Ascent has this id.'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: `${basePath}/{id}/my-times`,
+    operationId: 'getMyAscentTimes',
+    summary: "The signed-in Visitor's Ascent Times on an Ascent, newest first",
+    description: 'Found in their Recorded Runs through their Strava Connection; only for them.',
+    tags: ['Ascents'],
+    security: bearerAuth,
+    request: { params: ascentIdParamsSchema },
+    responses: {
+      200: {
+        description: 'Their Ascent Times; empty when they have none.',
+        content: { 'application/json': { schema: myAscentTimesSchema } },
+      },
+      400: errorResponse('`VALIDATION_FAILED`: the id is not a UUID.'),
+      401: errorResponse('`AUTHENTICATION_REQUIRED`: nobody is signed in.'),
       404: errorResponse('`ASCENT_NOT_FOUND`: no Ascent has this id.'),
     },
   });

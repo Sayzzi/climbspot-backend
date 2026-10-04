@@ -5,7 +5,14 @@ import type { Database } from '../../shared/infrastructure/database.ts';
 import { CreateAscent } from './application/create-ascent.ts';
 import { FindAscentsNearby } from './application/find-ascents-nearby.ts';
 import { GetAscent } from './application/get-ascent.ts';
+import { GetMyAscentTimes } from './application/get-my-ascent-times.ts';
+import type { Bounds } from './domain/ascent-repository.ts';
 import type { ElevationProvider } from './domain/elevation-provider.ts';
+import {
+  noAscentTimes,
+  type AscentAddedListener,
+  type PersonalAscentTimes,
+} from './domain/personal-ascent-times.ts';
 import { registerAscentsOpenApi } from './http/ascents.openapi.ts';
 import { createAscentsRouter } from './http/ascents.router.ts';
 import { readGpxPath } from './infrastructure/gpx/gpx-path-reader.ts';
@@ -16,6 +23,10 @@ export { OpenMeteoElevationProvider } from './infrastructure/open-meteo-elevatio
 export interface AscentsModuleDependencies {
   readonly db: Database;
   readonly elevationProvider: ElevationProvider;
+  /** Each Visitor's own Ascent Times; none by default. */
+  readonly ascentTimes?: PersonalAscentTimes;
+  /** Told of every Ascent added. */
+  readonly onAscentAdded?: AscentAddedListener;
 }
 
 const basePath = '/ascents';
@@ -23,6 +34,8 @@ const basePath = '/ascents';
 export function createAscentsModule({
   db,
   elevationProvider,
+  ascentTimes = noAscentTimes,
+  onAscentAdded = () => Promise.resolve(),
 }: AscentsModuleDependencies): HttpModule {
   const repository = new DrizzleAscentRepository(db);
 
@@ -31,13 +44,21 @@ export function createAscentsModule({
     elevationProvider,
     newId: randomUUID,
     now: () => new Date(),
+    onAscentAdded,
   });
   const getAscent = new GetAscent(repository);
-  const findAscentsNearby = new FindAscentsNearby(repository);
+  const findAscentsNearby = new FindAscentsNearby(repository, ascentTimes);
+  const getMyAscentTimes = new GetMyAscentTimes(repository, ascentTimes);
 
   return {
     basePath,
-    router: createAscentsRouter({ createAscent, getAscent, findAscentsNearby, readGpxPath }),
+    router: createAscentsRouter({
+      createAscent,
+      getAscent,
+      findAscentsNearby,
+      getMyAscentTimes,
+      readGpxPath,
+    }),
     registerOpenApi: (registry) => {
       registerAscentsOpenApi(registry, basePath);
     },
@@ -48,4 +69,10 @@ export function createAscentsModule({
 export function forgetContributor(db: Database) {
   const repository = new DrizzleAscentRepository(db);
   return { erase: (visitorId: string) => repository.forgetContributor(visitorId) };
+}
+
+/** The Ascents of the catalogue whose Start lies within a box, with their paths. */
+export function ascentCatalogue(db: Database) {
+  const repository = new DrizzleAscentRepository(db);
+  return { startingWithin: (bounds: Bounds) => repository.findStartingWithin(bounds) };
 }

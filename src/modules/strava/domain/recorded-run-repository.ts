@@ -1,3 +1,4 @@
+import type { Position } from '../../../shared/domain/position.ts';
 import type { RecordedRun, TrackPoint } from './recorded-run.ts';
 
 export interface RecordedRunRepository {
@@ -9,4 +10,6 @@ export interface RecordedRunRepository {
   /** The tracks of the Visitor's Recorded Runs started since `since`. */
   tracksSince(visitorId: string, since: Date): Promise<(readonly TrackPoint[])[]>;
   deleteAllOf(visitorId: string): Promise<void>;
+  /** Every Visitor's Recorded Runs whose track passes near `position`. */
+  passingNear(position: Position): Promise<RecordedRun[]>;
 }
