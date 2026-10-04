@@ -11,15 +11,18 @@ export const VISITOR_B: Identity = {
   email: 'bob@example.com',
 };
 
-const visitors = new Map([VISITOR_A, VISITOR_B].map((visitor) => [visitor.visitorId, visitor]));
+const PREFIX = 'test-token-';
 
-/** The access token a test sends to act as a Visitor. */
-export const tokenFor = (visitor: Identity) => `test-token-${visitor.visitorId}`;
+/** The access token a test sends to act as a Visitor: their identity, encoded. */
+export const tokenFor = (visitor: Identity) =>
+  `${PREFIX}${Buffer.from(JSON.stringify(visitor)).toString('base64url')}`;
 
-/** Recognises the test tokens of {@link VISITOR_A} and {@link VISITOR_B}, nothing else. */
+/** Recognises the tokens of {@link tokenFor}, nothing else. */
 export const fakeIdentityVerifier: IdentityVerifier = {
   verify: (token) =>
     Promise.resolve(
-      token.startsWith('test-token-') ? visitors.get(token.slice('test-token-'.length)) : undefined,
+      token.startsWith(PREFIX)
+        ? (JSON.parse(Buffer.from(token.slice(PREFIX.length), 'base64url').toString()) as Identity)
+        : undefined,
     ),
 };

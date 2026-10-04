@@ -27,6 +27,13 @@ const savedOf = async (app: ReturnType<typeof buildApp>, visitor: Identity) =>
     }
   ).savedItineraries;
 
+const contributorOf = async (ascentId: string) =>
+  (
+    await buildApp.db().execute<{
+      contributor: string | null;
+    }>(sql`select contributor_id as contributor from ascents where id = ${ascentId}`)
+  )[0]?.contributor;
+
 describe('DELETE /me', () => {
   it('needs a signed-in Visitor', async () => {
     expect((await request(buildApp()).delete('/me')).status).toBe(401);
@@ -79,22 +86,38 @@ describe('DELETE /me', () => {
     await request(app).delete('/me').set(as(VISITOR_A));
 
     expect(await savedOf(app, VISITOR_B)).toHaveLength(1);
-    const rows = await buildApp
-      .db()
-      .execute<{ contributor: string }>(
-        sql`select contributor_id as contributor from ascents where id = ${theirs.body.id as string}`,
-      );
-    expect(rows[0]?.contributor).toBe(VISITOR_B.visitorId);
+    expect(await contributorOf(theirs.body.id as string)).toBe(VISITOR_B.visitorId);
   });
 
   it('changes nothing when the Supabase user cannot be deleted', async () => {
     const app = buildApp({ directory: fakeAccountDirectory({ failing: true }).directory });
+    const added = await uploadGpx(app, gpxTrack(straightNorth(REFERENCE, 1000)), { as: VISITOR_A });
+    await request(app).patch('/me').set(as(VISITOR_A)).send({ flatPace: 330 });
     await saveLoop(app, VISITOR_A);
 
     const response = await request(app).delete('/me').set(as(VISITOR_A));
 
     expect(response.status).toBe(503);
     expect(response.body).toMatchObject({ error: { code: 'ACCOUNT_DELETION_UNAVAILABLE' } });
+    expect(await savedOf(app, VISITOR_A)).toHaveLength(1);
+    expect((await request(app).get('/me').set(as(VISITOR_A))).body).toMatchObject({
+      flatPace: 330,
+    });
+    expect(await contributorOf(added.body.id as string)).toBe(VISITOR_A.visitorId);
+  });
+
+  it('keeps the Supabase user, and everything else, when erasing fails', async () => {
+    const { directory, deleted } = fakeAccountDirectory();
+    const app = buildApp({
+      directory,
+      alsoErase: [() => ({ erase: () => Promise.reject(new Error('the database went away')) })],
+    });
+    await saveLoop(app, VISITOR_A);
+
+    const response = await request(app).delete('/me').set(as(VISITOR_A));
+
+    expect(response.status).toBe(500);
+    expect(deleted).toEqual([]);
     expect(await savedOf(app, VISITOR_A)).toHaveLength(1);
   });
 

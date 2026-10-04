@@ -5,7 +5,7 @@ import { signedInVisitor } from '../../../shared/http/identity.ts';
 import type { SavedItineraries } from '../application/saved-itineraries.ts';
 import { SavedItineraryNotFoundError } from '../domain/saved-itinerary.ts';
 import {
-  describe,
+  summaryOf,
   newSavedItinerarySchema,
   savedItineraryChangesSchema,
   toSavedItineraryResponse,
@@ -30,7 +30,7 @@ export function createSavedItinerariesRouter(savedItineraries: SavedItineraries)
     const saved = await savedItineraries.save(visitorId, {
       name,
       proposal,
-      ...describe(proposal),
+      ...summaryOf(proposal),
     });
     res.status(201).json(toSavedItineraryResponse(saved));
   });

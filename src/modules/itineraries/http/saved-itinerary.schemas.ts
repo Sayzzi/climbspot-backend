@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  PROPOSAL_KINDS,
   SAVED_ITINERARY_NAME_MAX_LENGTH,
   type ProposalKind,
   type SavedItinerary,
@@ -34,7 +35,7 @@ export const savedItinerarySummarySchema = z
   .object({
     id: z.uuid(),
     name: z.string(),
-    kind: z.enum(['loop', 'uphill', 'session']),
+    kind: z.enum(PROPOSAL_KINDS),
     length: z.number().meta({ description: 'Metres; the whole session for a Hill Session.' }),
     savedAt: z.iso.datetime(),
   })
@@ -49,7 +50,7 @@ export const savedItinerariesSchema = z
   .meta({ id: 'SavedItineraries' });
 
 /** Kind and length of a proposal, kept beside it for lists. */
-export function describe(proposal: Proposal): { kind: ProposalKind; length: number } {
+export function summaryOf(proposal: Proposal): { kind: ProposalKind; length: number } {
   return {
     kind: proposal.kind,
     length: proposal.kind === 'session' ? proposal.totals.length : proposal.length,

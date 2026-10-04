@@ -1,7 +1,9 @@
-import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { PgDatabase } from 'drizzle-orm/pg-core';
+import { drizzle, type PostgresJsQueryResultHKT } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
-export type Database = PostgresJsDatabase;
+/** The database, or a transaction on it: repositories work the same in both. */
+export type Database = PgDatabase<PostgresJsQueryResultHKT>;
 
 export interface DatabaseConnection {
   readonly db: Database;

@@ -3,22 +3,22 @@
 REST API for ClimbSpot: find uphill paths (**Ascents**) near you for running, trail running and cycling, and catalogue new ones.
 
 - Domain vocabulary: [`CONTEXT.md`](./CONTEXT.md)
-- Architecture decisions: [`docs/adr/`](./docs/adr/)
+- Architecture decisions: [`docs/adr/`](./docs/adr/0009-accounts-are-supabase-identities-verified-by-the-api.md)
 - Frontend: [climbspot-frontend](https://github.com/Sayzzi/climbspot-frontend)
 
 ## Stack
 
-| Concern         | Choice                                                                                                      |
-| --------------- | ----------------------------------------------------------------------------------------------------------- |
-| Runtime         | Node.js 22 (ESM)                                                                                            |
-| HTTP            | Express 5, helmet, cors                                                                                     |
-| Validation      | zod 4                                                                                                       |
-| API contract    | OpenAPI 3.1 generated from zod schemas, served at `GET /openapi.json`                                       |
-| Database        | PostgreSQL + PostGIS on Supabase, accessed with Drizzle ORM + postgres.js                                   |
-| Auth (upcoming) | Supabase Auth — the API verifies the JWTs it issues                                                         |
-| Logging         | pino (pretty in development, JSON otherwise)                                                                |
-| Tests           | Vitest + supertest                                                                                          |
-| Quality         | TypeScript strict, ESLint (typescript-eslint strict + boundaries), Prettier, husky, lint-staged, commitlint |
+| Concern      | Choice                                                                                                      |
+| ------------ | ----------------------------------------------------------------------------------------------------------- |
+| Runtime      | Node.js 22 (ESM)                                                                                            |
+| HTTP         | Express 5, helmet, cors                                                                                     |
+| Validation   | zod 4                                                                                                       |
+| API contract | OpenAPI 3.1 generated from zod schemas, served at `GET /openapi.json`                                       |
+| Database     | PostgreSQL + PostGIS on Supabase, accessed with Drizzle ORM + postgres.js                                   |
+| Auth         | Supabase Auth (magic link, Google) — the API verifies the JWTs it issues                                    |
+| Logging      | pino (pretty in development, JSON otherwise)                                                                |
+| Tests        | Vitest + supertest                                                                                          |
+| Quality      | TypeScript strict, ESLint (typescript-eslint strict + boundaries), Prettier, husky, lint-staged, commitlint |
 
 ## Getting started
 
@@ -58,6 +58,16 @@ Requests outside those areas find no way. To cover another area, add it to `rout
 | `pnpm typecheck`                                | Type-check sources, tests and config files     |
 | `pnpm db:generate` / `db:migrate` / `db:studio` | Drizzle migrations and studio                  |
 
+### Accounts
+
+Visitors sign in with Supabase Auth in the browser; the API only verifies their tokens against the project's public keys ([ADR 0009](./docs/adr/0009-accounts-are-supabase-identities-verified-by-the-api.md)). Set `SUPABASE_URL` in `.env`. Deleting an account also deletes its Supabase user, which needs `SUPABASE_SERVICE_ROLE_KEY` (Project Settings > API keys); without it, deleting answers 503 and erases nothing.
+
+Signing in is set up once, by hand, in the Supabase dashboard:
+
+1. **Authentication > URL Configuration**: set the Site URL to the frontend's address and add every frontend origin (e.g. `http://localhost:5173/`) to the Redirect URLs, so that sign-in links and Google bring Visitors back.
+2. **Authentication > Sign In / Providers > Email**: keep it enabled; it sends the magic links.
+3. **Google**: in the Google Cloud console, create an OAuth client of type _Web application_ whose authorised redirect URI is `https://<project-ref>.supabase.co/auth/v1/callback`; then, in **Authentication > Sign In / Providers > Google**, enable it and paste the client ID and secret.
+
 ## Architecture
 
 A modular monolith where every business module follows a hexagonal layout ([ADR 0002](./docs/adr/0002-hexagonal-modules-with-manual-injection.md)):
@@ -73,9 +83,9 @@ src/
 │       └── index.ts         # wires the module and exposes it as an HttpModule
 ├── shared/
 │   ├── config/              # environment validation
-│   ├── domain/              # DomainError, Position, and survey/: how any path is sampled and measured
-│   ├── http/                # error handling, OpenAPI document, HttpModule contract
-│   └── infrastructure/      # logger, database connection
+│   ├── domain/              # DomainError, Position, Identity, and survey/: how any path is sampled and measured
+│   ├── http/                # error handling, OpenAPI document, HttpModule contract, who is signed in
+│   └── infrastructure/      # logger, database connection, Supabase token verification
 ├── app.ts                   # createApp(deps): pure HTTP application, used by tests
 └── server.ts                # composition root: reads env, wires dependencies, listens
 ```

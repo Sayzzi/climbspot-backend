@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import type { AccountDirectory } from '../src/modules/accounts/domain/account-directory.ts';
-import { createAccountsModule } from '../src/modules/accounts/index.ts';
+import { createAccountsModule, type VisitorDataEraserFor } from '../src/modules/accounts/index.ts';
 import { createAscentsModule, forgetContributor } from '../src/modules/ascents/index.ts';
 import {
   createSavedItinerariesModule,
@@ -34,8 +34,14 @@ export function fakeAccountDirectory({ failing = false } = {}) {
   return { directory, deleted };
 }
 
+export interface AccountsAppOptions {
+  readonly directory?: AccountDirectory;
+  /** More to erase with an account, after the Ascents and Saved Itineraries. */
+  readonly alsoErase?: readonly VisitorDataEraserFor[];
+}
+
 export interface AccountsApp {
-  (options?: { directory?: AccountDirectory }): Express;
+  (options?: AccountsAppOptions): Express;
   /** The test database, to look at what the API never shows. */
   readonly db: () => Database;
 }
@@ -61,7 +67,10 @@ export function useAccountsApp(): AccountsApp {
 
   beforeEach(() => testDatabase.truncate());
 
-  const build = ({ directory = fakeAccountDirectory().directory } = {}) =>
+  const build = ({
+    directory = fakeAccountDirectory().directory,
+    alsoErase = [],
+  }: AccountsAppOptions = {}) =>
     createApp({
       logger: pino({ level: 'silent' }),
       corsOrigins: [],
@@ -70,7 +79,7 @@ export function useAccountsApp(): AccountsApp {
         createAccountsModule({
           db: connection.db,
           directory,
-          erasers: [forgetContributor(connection.db), forgetSavedItineraries(connection.db)],
+          erasers: [forgetContributor, forgetSavedItineraries, ...alsoErase],
         }),
         createAscentsModule({ db: connection.db, elevationProvider: uniformGradient(0.08) }),
         createSavedItinerariesModule({ db: connection.db }),

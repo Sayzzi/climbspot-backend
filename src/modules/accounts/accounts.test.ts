@@ -37,6 +37,14 @@ describe('GET /me', () => {
 
     expect(response.body).toMatchObject({ displayName: 'bob' });
   });
+
+  it('shows the e-mail the identity has now', async () => {
+    await me(tokenFor(VISITOR_A));
+
+    const response = await me(tokenFor({ ...VISITOR_A, email: 'ada@new.example' }));
+
+    expect(response.body).toMatchObject({ displayName: 'Ada', email: 'ada@new.example' });
+  });
 });
 
 describe('PATCH /me', () => {

@@ -1,6 +1,7 @@
 import { DomainError } from '../../../shared/domain/domain-error.ts';
 
-export type ProposalKind = 'loop' | 'uphill' | 'session';
+export const PROPOSAL_KINDS = ['loop', 'uphill', 'session'] as const;
+export type ProposalKind = (typeof PROPOSAL_KINDS)[number];
 
 /** A frozen copy of a proposal a signed-in Visitor keeps (see CONTEXT.md). */
 export interface SavedItinerary {

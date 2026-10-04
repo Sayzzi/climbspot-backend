@@ -1,33 +1,28 @@
 import { AccountDeletionUnavailableError } from '../domain/account.ts';
 import type { AccountDirectory } from '../domain/account-directory.ts';
-import type { AccountRepository } from '../domain/account-repository.ts';
-import type { VisitorDataEraser } from '../domain/visitor-data-eraser.ts';
+import type { AccountErasure } from '../domain/account-erasure.ts';
 
 export interface DeleteMyAccountDependencies {
-  readonly accounts: AccountRepository;
+  readonly erasure: AccountErasure;
   readonly directory: AccountDirectory;
-  /** What other parts of ClimbSpot keep about the Visitor. */
-  readonly erasers: readonly VisitorDataEraser[];
 }
 
 /**
- * Deletes a signed-in Visitor's account: first their identity, so that a failure there
- * leaves everything as it was, then everything ClimbSpot keeps about them.
+ * Deletes a signed-in Visitor's account: everything ClimbSpot keeps about them, then
+ * their identity last, so that a failure anywhere leaves everything as it was.
  */
 export class DeleteMyAccount {
   constructor(private readonly dependencies: DeleteMyAccountDependencies) {}
 
   /** @throws {AccountDeletionUnavailableError} when the identity cannot be deleted. */
   async execute(visitorId: string): Promise<void> {
-    const { accounts, directory, erasers } = this.dependencies;
-    try {
-      await directory.deleteVisitor(visitorId);
-    } catch (error) {
-      throw new AccountDeletionUnavailableError({ cause: error });
-    }
-    for (const eraser of erasers) {
-      await eraser.erase(visitorId);
-    }
-    await accounts.delete(visitorId);
+    const { erasure, directory } = this.dependencies;
+    await erasure.erase(visitorId, async () => {
+      try {
+        await directory.deleteVisitor(visitorId);
+      } catch (error) {
+        throw new AccountDeletionUnavailableError({ cause: error });
+      }
+    });
   }
 }

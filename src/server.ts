@@ -43,7 +43,7 @@ const app = createApp({
     createAccountsModule({
       db: database.db,
       directory: accountDirectory,
-      erasers: [forgetContributor(database.db), forgetSavedItineraries(database.db)],
+      erasers: [forgetContributor, forgetSavedItineraries],
     }),
     createSavedItinerariesModule({ db: database.db }),
     createAscentsModule({
