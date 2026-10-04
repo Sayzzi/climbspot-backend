@@ -4,11 +4,13 @@ import { StravaConnections } from './application/strava-connections.ts';
 import type { StravaGateway } from './domain/strava-gateway.ts';
 import { registerStravaOpenApi } from './http/strava.openapi.ts';
 import { createStravaRouter } from './http/strava.router.ts';
+import { DrizzleRecordedRunRepository } from './infrastructure/persistence/drizzle-recorded-run-repository.ts';
 import { DrizzleStravaConnectionRepository } from './infrastructure/persistence/drizzle-strava-connection-repository.ts';
 import { SignedConnectionStates } from './infrastructure/signed-connection-states.ts';
 import { TokenVault } from './infrastructure/token-vault.ts';
 
-export type { StravaGateway, StravaGrant } from './domain/strava-gateway.ts';
+export type { TrackSample } from './domain/recorded-run.ts';
+export type { StravaGateway, StravaGrant, StravaOuting } from './domain/strava-gateway.ts';
 export {
   StravaAuthorizationRefusedError,
   StravaConnectionLostError,
@@ -28,13 +30,14 @@ const basePath = '/strava';
 function stravaConnections(db: Database, { gateway, tokenKey }: StravaSettings) {
   return new StravaConnections({
     connections: new DrizzleStravaConnectionRepository(db, new TokenVault(tokenKey)),
+    runs: new DrizzleRecordedRunRepository(db),
     gateway,
     states: new SignedConnectionStates(tokenKey),
     now: () => new Date(),
   });
 }
 
-/** The Strava Connection: linking a Visitor's Strava account, and ending the link. */
+/** The Strava Connection: linking a Visitor's Strava account, importing their Recorded Runs, and ending the link. */
 export function createStravaModule({
   db,
   ...settings

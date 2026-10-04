@@ -98,3 +98,76 @@ describe('StravaApiGateway', () => {
     });
   });
 });
+
+describe('StravaApiGateway, reading outings', () => {
+  const outing = (id: number, start: string, sport = 'Run') => ({
+    id,
+    type: sport,
+    sport_type: sport,
+    start_date: start,
+    distance: 5000,
+    moving_time: 1500,
+  });
+
+  it('lists every outing since a date, page by page, oldest first', async () => {
+    const firstPage = Array.from({ length: 200 }, (_, index) =>
+      outing(index + 2, '2026-09-02T07:00:00Z'),
+    );
+    const pages = [firstPage, [outing(1, '2026-09-01T07:00:00Z', 'TrailRun')]];
+    const { subject, sent } = gateway(() => Response.json(pages.shift() ?? []));
+
+    const outings = await subject.outingsSince('access', new Date('2026-07-01T00:00:00Z'));
+
+    expect(outings).toHaveLength(201);
+    expect(outings[0]).toEqual({
+      id: 1,
+      sport: 'TrailRun',
+      startedAt: new Date('2026-09-01T07:00:00Z'),
+      distance: 5000,
+      movingTime: 1500,
+    });
+    const first = new URL(sent[0]?.url ?? '');
+    expect(first.pathname).toBe('/api/v3/athlete/activities');
+    expect(first.searchParams.get('after')).toBe(String(Date.parse('2026-07-01T00:00:00Z') / 1000));
+    expect(new URL(sent[1]?.url ?? '').searchParams.get('page')).toBe('2');
+    expect(sent[0]?.headers.get('Authorization')).toBe('Bearer access');
+  });
+
+  it('reads an outing’s readings from its streams', async () => {
+    const { subject, sent } = gateway(() =>
+      Response.json({
+        latlng: {
+          data: [
+            [45, 6],
+            [45.001, 6],
+          ],
+        },
+        altitude: { data: [200, 201] },
+        distance: { data: [0, 111] },
+        time: { data: [0, 30] },
+        moving: { data: [false, true] },
+      }),
+    );
+
+    expect(await subject.track('access', 7)).toEqual([
+      { latitude: 45, longitude: 6, altitude: 200, distance: 0, elapsed: 0, moving: false },
+      { latitude: 45.001, longitude: 6, altitude: 201, distance: 111, elapsed: 30, moving: true },
+    ]);
+    expect(new URL(sent[0]?.url ?? '').pathname).toBe('/api/v3/activities/7/streams');
+  });
+
+  it('gives no readings for an outing recorded without positions', async () => {
+    expect(
+      await gateway(() => Response.json({ time: { data: [0] } })).subject.track('a', 7),
+    ).toEqual([]);
+    expect(await gateway(() => new Response(null, { status: 404 })).subject.track('a', 7)).toEqual(
+      [],
+    );
+  });
+
+  it('says the connection is lost when Strava no longer accepts the token', async () => {
+    await expect(
+      gateway(() => new Response(null, { status: 401 })).subject.outingsSince('a', new Date()),
+    ).rejects.toMatchObject({ code: 'STRAVA_CONNECTION_LOST' });
+  });
+});

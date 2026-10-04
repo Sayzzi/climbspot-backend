@@ -19,6 +19,10 @@ export interface StravaConnection {
   readonly athlete: StravaAthlete;
   readonly tokens: StravaTokens;
   readonly connectedAt: Date;
+  /** When Recorded Runs were last imported in full. */
+  readonly lastSyncAt?: Date;
+  /** When Strava stopped accepting the connection: the Visitor withdrew ClimbSpot there. */
+  readonly lostAt?: Date;
 }
 
 /** Strava is down, or its limits are reached: trying again later may work. */

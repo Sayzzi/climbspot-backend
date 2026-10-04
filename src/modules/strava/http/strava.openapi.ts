@@ -53,6 +53,8 @@ export function registerStravaOpenApi(registry: OpenAPIRegistry, basePath: strin
     path: `${basePath}/connection`,
     operationId: 'connectStrava',
     summary: 'Make the Strava Connection with the code Strava sent back',
+    description:
+      'Then imports the runs and trail runs of the last three months, as far as Strava’s limits allow.',
     tags: ['Strava'],
     security: bearerAuth,
     request: {
@@ -69,6 +71,27 @@ export function registerStravaOpenApi(registry: OpenAPIRegistry, basePath: strin
         '`STRAVA_AUTHORIZATION_REFUSED`: Strava refused the code, or the state is not the Visitor’s.',
       ),
       503: errorResponse('`STRAVA_UNAVAILABLE`: Strava is down or its limits are reached.'),
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: `${basePath}/sync`,
+    operationId: 'syncStrava',
+    summary: 'Import the Recorded Runs started since the latest one',
+    description:
+      'Runs and trail runs only. Stopping at Strava’s limits keeps what was imported; the next synchronisation carries on.',
+    tags: ['Strava'],
+    security: bearerAuth,
+    responses: {
+      200: connection,
+      401: signedOut,
+      409: errorResponse(
+        '`STRAVA_CONNECTION_LOST`: the Visitor withdrew ClimbSpot at Strava; they need to connect again.',
+      ),
+      503: errorResponse(
+        '`STRAVA_UNAVAILABLE`: Strava is down or its limits are reached; what was imported stays.',
+      ),
     },
   });
 

@@ -24,6 +24,10 @@ export function createStravaRouter(connections: StravaConnections): Router {
     res.json(toConnectionResponse(connection));
   });
 
+  router.post('/sync', async (_req, res) => {
+    res.json(toConnectionResponse(await connections.sync(signedInVisitor(res).visitorId)));
+  });
+
   router.delete('/connection', async (_req, res) => {
     await connections.end(signedInVisitor(res).visitorId);
     res.status(204).end();

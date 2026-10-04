@@ -4,7 +4,7 @@ import type { Database } from '../../../../shared/infrastructure/database.ts';
 import type { StravaConnection } from '../../domain/strava-connection.ts';
 import type { StravaConnectionRepository } from '../../domain/strava-connection-repository.ts';
 import type { TokenVault } from '../token-vault.ts';
-import { stravaConnections } from './strava-connections.schema.ts';
+import { stravaConnections } from './strava.schema.ts';
 
 export class DrizzleStravaConnectionRepository implements StravaConnectionRepository {
   constructor(
@@ -27,6 +27,8 @@ export class DrizzleStravaConnectionRepository implements StravaConnectionReposi
           expiresAt: row.expiresAt,
         },
         connectedAt: row.connectedAt,
+        ...(row.lastSyncAt && { lastSyncAt: row.lastSyncAt }),
+        ...(row.lostAt && { lostAt: row.lostAt }),
       }
     );
   }
@@ -39,6 +41,8 @@ export class DrizzleStravaConnectionRepository implements StravaConnectionReposi
       refreshToken: this.vault.seal(connection.tokens.refreshToken),
       expiresAt: connection.tokens.expiresAt,
       connectedAt: connection.connectedAt,
+      lastSyncAt: connection.lastSyncAt ?? null,
+      lostAt: connection.lostAt ?? null,
     };
     await this.db
       .insert(stravaConnections)

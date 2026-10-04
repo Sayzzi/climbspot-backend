@@ -2,29 +2,11 @@ import { sql } from 'drizzle-orm';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
-import { tokenFor, VISITOR_A, VISITOR_B } from '../../../test/identity.ts';
+import { VISITOR_A, VISITOR_B } from '../../../test/identity.ts';
 import { fakeStrava, STRAVA_CODES } from '../../../test/strava.ts';
-import { useStravaApp } from '../../../test/strava-app.ts';
-import type { Identity } from '../../shared/domain/identity.ts';
+import { as, connect, connectionOf, stateFor, useStravaApp } from '../../../test/strava-app.ts';
 
 const buildApp = useStravaApp();
-
-const as = (visitor: Identity) => ({ Authorization: `Bearer ${tokenFor(visitor)}` });
-
-type App = ReturnType<typeof buildApp>;
-
-async function stateFor(app: App, visitor: Identity): Promise<string> {
-  const { body } = await request(app).get('/strava/authorize').set(as(visitor));
-  return new URL((body as { url: string }).url).searchParams.get('state') ?? '';
-}
-
-async function connect(app: App, visitor: Identity, code: string = STRAVA_CODES.ada.code) {
-  const state = await stateFor(app, visitor);
-  return request(app).post('/strava/connection').set(as(visitor)).send({ code, state });
-}
-
-const connectionOf = async (app: App, visitor: Identity) =>
-  (await request(app).get('/strava/connection').set(as(visitor))).body as Record<string, unknown>;
 
 describe('Strava Connection', () => {
   it.each([
@@ -58,6 +40,8 @@ describe('Strava Connection', () => {
       status: 'none',
       athlete: null,
       connectedAt: null,
+      lastSyncAt: null,
+      recordedRuns: 0,
     });
   });
 
@@ -71,6 +55,8 @@ describe('Strava Connection', () => {
       status: 'connected',
       athlete: { name: 'Ada Runner' },
       connectedAt: expect.any(String) as unknown,
+      lastSyncAt: expect.any(String) as unknown,
+      recordedRuns: 0,
     };
     expect(response.body).toEqual(expected);
     expect(await connectionOf(app, VISITOR_A)).toEqual(expected);
@@ -147,8 +133,9 @@ describe('Strava Connection', () => {
 
     await request(app).delete('/strava/connection').set(as(VISITOR_A));
 
-    expect(strava.refreshed).toEqual(['refresh-1001-1']);
-    expect(strava.revoked).toEqual(['access-1001-2']);
+    // The tokens it grants are always expired: each use refreshes them first.
+    expect(strava.refreshed.length).toBeGreaterThan(0);
+    expect(strava.revoked).toEqual([`access-1001-${String(strava.refreshed.length + 1)}`]);
   });
 
   it('erases the connection even when Strava cannot be told', async () => {

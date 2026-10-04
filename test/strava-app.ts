@@ -1,5 +1,6 @@
 import type { Express } from 'express';
 import { pino } from 'pino';
+import request from 'supertest';
 import { afterAll, beforeAll, beforeEach } from 'vitest';
 
 import { createApp } from '../src/app.ts';
@@ -16,8 +17,9 @@ import {
 } from '../src/shared/infrastructure/database.ts';
 import { fakeAccountDirectory } from './accounts-app.ts';
 import { createTestDatabase, type TestDatabase } from './database.ts';
-import { fakeIdentityVerifier } from './identity.ts';
-import { fakeStrava } from './strava.ts';
+import type { Identity } from '../src/shared/domain/identity.ts';
+import { fakeIdentityVerifier, tokenFor } from './identity.ts';
+import { fakeStrava, STRAVA_CODES } from './strava.ts';
 
 /** The key test tokens are encrypted with: 32 bytes, base64. */
 export const TEST_TOKEN_KEY = Buffer.alloc(32, 7).toString('base64');
@@ -66,3 +68,24 @@ export function useStravaApp(): StravaApp {
   };
   return Object.assign(build, { db: () => connection.db });
 }
+
+export const as = (visitor: Identity) => ({ Authorization: `Bearer ${tokenFor(visitor)}` });
+
+/** The state the API gives the Visitor for Strava's authorisation. */
+export async function stateFor(app: Express, visitor: Identity): Promise<string> {
+  const response = await request(app).get('/strava/authorize').set(as(visitor));
+  return new URL((response.body as { url: string }).url).searchParams.get('state') ?? '';
+}
+
+/** Connects the Visitor as Strava would send them back with `code`. */
+export async function connect(
+  app: Express,
+  visitor: Identity,
+  code: string = STRAVA_CODES.ada.code,
+) {
+  const state = await stateFor(app, visitor);
+  return request(app).post('/strava/connection').set(as(visitor)).send({ code, state });
+}
+
+export const connectionOf = async (app: Express, visitor: Identity) =>
+  (await request(app).get('/strava/connection').set(as(visitor))).body as Record<string, unknown>;

@@ -71,6 +71,13 @@
       "when": 1791105430131,
       "tag": "0009_keep_strava_connections",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791105733129,
+      "tag": "0010_import_recorded_runs",
+      "breakpoints": true
     }
   ]
 }

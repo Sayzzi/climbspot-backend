@@ -11,4 +11,6 @@ export const unavailableStrava: StravaGateway = {
   exchange: () => Promise.reject(new StravaUnavailableError()),
   refresh: () => Promise.reject(new StravaUnavailableError()),
   revoke: () => Promise.reject(new StravaUnavailableError()),
+  outingsSince: () => Promise.reject(new StravaUnavailableError()),
+  track: () => Promise.reject(new StravaUnavailableError()),
 };
