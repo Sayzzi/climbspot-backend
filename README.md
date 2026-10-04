@@ -66,7 +66,8 @@ Signing in is set up once, by hand, in the Supabase dashboard:
 
 1. **Authentication > URL Configuration**: set the Site URL to the frontend's address and add every frontend origin (e.g. `http://localhost:5173/`) to the Redirect URLs, so that sign-in links and Google bring Visitors back.
 2. **Authentication > Sign In / Providers > Email**: keep it enabled (it sends the magic links), with **Confirm email** and **Secure password change** on (changing a password then asks for a code by e-mail when the last sign-in is old), and a **minimum password length of 15** (ADR 0009). Add the frontend's `/new-password` page to the Redirect URLs: password recovery links bring Visitors there. On the Pro plan, also turn on **Prevent use of leaked passwords**; until then, the frontend checks new passwords against Pwned Passwords.
-3. **Google**: in the Google Cloud console, create an OAuth client of type _Web application_ whose authorised redirect URI is `https://<project-ref>.supabase.co/auth/v1/callback`; then, in **Authentication > Sign In / Providers > Google**, enable it and paste the client ID and secret.
+3. **Authentication > Multi-Factor**: turn on **TOTP (App Authenticator)**. A Visitor who lost their authenticator app writes to the team; remove their factor in **Authentication > Users**, on their user, under its MFA factors.
+4. **Google**: in the Google Cloud console, create an OAuth client of type _Web application_ whose authorised redirect URI is `https://<project-ref>.supabase.co/auth/v1/callback`; then, in **Authentication > Sign In / Providers > Google**, enable it and paste the client ID and secret.
 
 ### Strava
 
