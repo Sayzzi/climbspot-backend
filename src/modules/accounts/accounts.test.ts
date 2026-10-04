@@ -34,6 +34,7 @@ describe('GET /me', () => {
       email: 'ada@example.com',
       flatPace: null,
       flatPaceSource: null,
+      stravaFlatPace: null,
     });
   });
 

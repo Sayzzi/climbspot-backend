@@ -21,6 +21,9 @@ export const accountSchema = z
       description: 'The Flat Pace that applies: the one stated, or else the one from Strava.',
     }),
     flatPaceSource: z.enum(['stated', 'strava']).nullable(),
+    stravaFlatPace: flatPace.nullable().meta({
+      description: 'The Flat Pace from Strava, even when a stated one applies.',
+    }),
   })
   .meta({ id: 'Account' });
 
@@ -35,11 +38,16 @@ export const accountChangesSchema = z
 
 export type AccountResponse = z.infer<typeof accountSchema>;
 
-export function toAccountResponse({ account, flatPace }: MyAccount): AccountResponse {
+export function toAccountResponse({
+  account,
+  flatPace,
+  stravaFlatPace,
+}: MyAccount): AccountResponse {
   return {
     displayName: account.displayName,
     email: account.email ?? null,
     flatPace: flatPace?.secondsPerKm ?? null,
     flatPaceSource: flatPace?.source ?? null,
+    stravaFlatPace: stravaFlatPace ?? null,
   };
 }

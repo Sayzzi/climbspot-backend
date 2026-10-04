@@ -35,9 +35,7 @@ export class GetMyAccount {
   }
 
   async withFlatPace(account: Account): Promise<MyAccount> {
-    return {
-      account,
-      flatPace: flatPaceOf(account, await this.stravaFlatPace.of(account.visitorId)),
-    };
+    const stravaFlatPace = await this.stravaFlatPace.of(account.visitorId);
+    return { account, flatPace: flatPaceOf(account, stravaFlatPace), stravaFlatPace };
   }
 }

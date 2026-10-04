@@ -22,6 +22,8 @@ export interface FlatPace {
 export interface MyAccount {
   readonly account: Account;
   readonly flatPace: FlatPace | undefined;
+  /** The Flat Pace from Strava, even when a stated one applies: the Visitor may go back to it. */
+  readonly stravaFlatPace: number | undefined;
 }
 
 /** The Flat Pace that applies: the one the Visitor stated, or else Strava's. */

@@ -81,7 +81,11 @@ describe('Flat Pace from Strava', () => {
   it('is none with fewer than 10 km of flat stretches', async () => {
     const { app } = await connected(flatRuns(2, 4));
 
-    expect(await me(app)).toMatchObject({ flatPace: null, flatPaceSource: null });
+    expect(await me(app)).toMatchObject({
+      flatPace: null,
+      flatPaceSource: null,
+      stravaFlatPace: null,
+    });
   });
 
   it('follows each synchronisation', async () => {
@@ -99,7 +103,11 @@ describe('Flat Pace from Strava', () => {
     const { app } = await connected(flatRuns(3, 4));
 
     const stated = await request(app).patch('/me').set(as(VISITOR_A)).send({ flatPace: 330 });
-    expect(stated.body).toMatchObject({ flatPace: 330, flatPaceSource: 'stated' });
+    expect(stated.body).toMatchObject({
+      flatPace: 330,
+      flatPaceSource: 'stated',
+      stravaFlatPace: 300,
+    });
     expect(await me(app)).toMatchObject({ flatPace: 330, flatPaceSource: 'stated' });
 
     const reverted = await request(app).patch('/me').set(as(VISITOR_A)).send({ flatPace: null });
