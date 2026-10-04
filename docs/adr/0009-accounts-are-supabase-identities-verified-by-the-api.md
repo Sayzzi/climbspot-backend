@@ -12,3 +12,15 @@ Visitors sign in with Supabase Auth (a magic link by e-mail, or Google), in the 
 - The API needs the project's Supabase URL to fetch the signing keys, and the service-role key for account deletion; neither ever reaches the browser.
 - Supabase's built-in e-mail sender is rate-limited and meant for testing; a custom SMTP sender is needed before magic links can serve the public.
 - Contributed Ascents keep their Contributor's id, set to nothing when the account is deleted; it is never shown to others.
+
+## Amendment: passwords, second factor and passkeys
+
+Visitors may also sign in with a password or a passkey; every method leads to the same account. A Visitor may add an authenticator app as a second factor (TOTP, up to two apps). Once they have, the API itself refuses their sessions that have not passed it (`aal1`), answering `SECOND_FACTOR_REQUIRED`: a second factor only the browser enforced would not protect against a stolen token. Supabase's tokens do not say whether an account has a second factor, so the API asks Supabase's admin API, behind the account-directory port, and keeps the answer for a minute. When Supabase cannot be asked and nothing recent is kept, those sessions are refused rather than let through. Without the service-role key (in development), the check is off and the API says so as it starts.
+
+Passwords follow NIST SP 800-63B-4: at least 15 characters, as the second factor is optional; no composition rules; up to at least 64 characters; known leaked passwords refused. Supabase refuses leaked passwords on its Pro plan only: until then, the browser checks them against Pwned Passwords, sending only the first five characters of their SHA-1 hash.
+
+### Considered options
+
+- **A Supabase access-token hook** adding "has a second factor" to tokens: no extra call, but logic and settings living inside Supabase, against the decision above that the API decides and Supabase only identifies.
+- **Letting sessions through when Supabase cannot be asked**: available, but a second factor that switches off when a dependency fails is no second factor.
+- **Our own recovery codes**: security code of our own to write and keep; a second authenticator app, and a manual removal of the factor on request, serve instead.
