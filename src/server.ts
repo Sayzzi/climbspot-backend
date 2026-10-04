@@ -21,6 +21,7 @@ import {
 import {
   createStravaModule,
   forgetStravaConnection,
+  stravaFlatPace,
   StravaApiGateway,
   unavailableStrava,
   type StravaSettings,
@@ -66,6 +67,7 @@ const app = createApp({
       db: database.db,
       directory: accountDirectory,
       erasers: [forgetContributor, forgetSavedItineraries, forgetStravaConnection(strava)],
+      stravaFlatPace: stravaFlatPace({ db: database.db, ...strava }),
     }),
     createSavedItinerariesModule({ db: database.db }),
     createStravaModule({ db: database.db, ...strava }),

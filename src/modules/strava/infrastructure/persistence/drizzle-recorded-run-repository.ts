@@ -1,7 +1,7 @@
-import { count, eq, max } from 'drizzle-orm';
+import { and, count, eq, gte, max } from 'drizzle-orm';
 
 import type { Database } from '../../../../shared/infrastructure/database.ts';
-import type { RecordedRun } from '../../domain/recorded-run.ts';
+import type { RecordedRun, TrackPoint } from '../../domain/recorded-run.ts';
 import type { RecordedRunRepository } from '../../domain/recorded-run-repository.ts';
 import { recordedRuns } from './strava.schema.ts';
 
@@ -26,6 +26,14 @@ export class DrizzleRecordedRunRepository implements RecordedRunRepository {
       .from(recordedRuns)
       .where(eq(recordedRuns.visitorId, visitorId));
     return row?.runs ?? 0;
+  }
+
+  async tracksSince(visitorId: string, since: Date): Promise<(readonly TrackPoint[])[]> {
+    const rows = await this.db
+      .select({ track: recordedRuns.track })
+      .from(recordedRuns)
+      .where(and(eq(recordedRuns.visitorId, visitorId), gte(recordedRuns.startedAt, since)));
+    return rows.map((row) => row.track);
   }
 
   async deleteAllOf(visitorId: string): Promise<void> {

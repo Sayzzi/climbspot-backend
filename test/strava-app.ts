@@ -8,6 +8,7 @@ import { createAccountsModule } from '../src/modules/accounts/index.ts';
 import {
   createStravaModule,
   forgetStravaConnection,
+  stravaFlatPace,
   type StravaGateway,
 } from '../src/modules/strava/index.ts';
 import {
@@ -62,6 +63,7 @@ export function useStravaApp(): StravaApp {
           db: connection.db,
           directory: fakeAccountDirectory().directory,
           erasers: [forgetStravaConnection(strava)],
+          stravaFlatPace: stravaFlatPace({ db: connection.db, ...strava }),
         }),
       ],
     });

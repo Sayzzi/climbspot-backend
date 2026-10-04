@@ -29,6 +29,7 @@ export class DrizzleStravaConnectionRepository implements StravaConnectionReposi
         connectedAt: row.connectedAt,
         ...(row.lastSyncAt && { lastSyncAt: row.lastSyncAt }),
         ...(row.lostAt && { lostAt: row.lostAt }),
+        ...(row.flatPace !== null && { flatPace: row.flatPace }),
       }
     );
   }
@@ -43,6 +44,7 @@ export class DrizzleStravaConnectionRepository implements StravaConnectionReposi
       connectedAt: connection.connectedAt,
       lastSyncAt: connection.lastSyncAt ?? null,
       lostAt: connection.lostAt ?? null,
+      flatPace: connection.flatPace ?? null,
     };
     await this.db
       .insert(stravaConnections)

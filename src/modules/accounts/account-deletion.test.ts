@@ -58,6 +58,7 @@ describe('DELETE /me', () => {
       displayName: 'Ada',
       email: 'ada@example.com',
       flatPace: null,
+      flatPaceSource: null,
     });
   });
 

@@ -29,7 +29,12 @@ describe('GET /me', () => {
     const response = await me(tokenFor(VISITOR_A));
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ displayName: 'Ada', email: 'ada@example.com', flatPace: null });
+    expect(response.body).toEqual({
+      displayName: 'Ada',
+      email: 'ada@example.com',
+      flatPace: null,
+      flatPaceSource: null,
+    });
   });
 
   it('names an account after its e-mail when the identity has no name', async () => {

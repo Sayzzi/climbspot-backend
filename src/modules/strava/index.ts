@@ -51,6 +51,12 @@ export function createStravaModule({
   };
 }
 
+/** The Flat Pace worked out from each Visitor's Recorded Runs, for their account. */
+export function stravaFlatPace({ db, ...settings }: StravaSettings & { readonly db: Database }) {
+  const connections = stravaConnections(db, settings);
+  return { of: (visitorId: string) => connections.flatPace(visitorId) };
+}
+
 /** Ends a Visitor's Strava Connection when their account is deleted. */
 export function forgetStravaConnection(settings: StravaSettings) {
   return (db: Database) => {

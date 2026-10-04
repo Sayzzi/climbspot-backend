@@ -23,6 +23,8 @@ export const stravaConnections = pgTable('strava_connections', {
   connectedAt: timestamp('connected_at', { withTimezone: true }).notNull(),
   lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
   lostAt: timestamp('lost_at', { withTimezone: true }),
+  /** Seconds per kilometre. */
+  flatPace: doublePrecision('flat_pace'),
 });
 
 /** Recorded Runs, each Visitor's own, keyed by their Strava id. */

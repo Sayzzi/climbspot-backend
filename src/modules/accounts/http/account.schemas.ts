@@ -4,7 +4,7 @@ import {
   DISPLAY_NAME_MAX_LENGTH,
   FASTEST_FLAT_PACE,
   SLOWEST_FLAT_PACE,
-  type Account,
+  type MyAccount,
 } from '../domain/account.ts';
 
 const flatPace = z
@@ -17,23 +17,29 @@ export const accountSchema = z
   .object({
     displayName: z.string().meta({ description: 'Private to the Visitor.' }),
     email: z.string().nullable(),
-    flatPace: flatPace.nullable(),
+    flatPace: flatPace.nullable().meta({
+      description: 'The Flat Pace that applies: the one stated, or else the one from Strava.',
+    }),
+    flatPaceSource: z.enum(['stated', 'strava']).nullable(),
   })
   .meta({ id: 'Account' });
 
 export const accountChangesSchema = z
   .object({
     displayName: z.string().trim().min(1).max(DISPLAY_NAME_MAX_LENGTH).optional(),
-    flatPace: flatPace.nullable().optional(),
+    flatPace: flatPace.nullable().optional().meta({
+      description: 'A stated Flat Pace, or `null` to go back to the one from Strava.',
+    }),
   })
   .meta({ id: 'AccountChanges' });
 
 export type AccountResponse = z.infer<typeof accountSchema>;
 
-export function toAccountResponse(account: Account): AccountResponse {
+export function toAccountResponse({ account, flatPace }: MyAccount): AccountResponse {
   return {
     displayName: account.displayName,
     email: account.email ?? null,
-    flatPace: account.flatPace ?? null,
+    flatPace: flatPace?.secondsPerKm ?? null,
+    flatPaceSource: flatPace?.source ?? null,
   };
 }

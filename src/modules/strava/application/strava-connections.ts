@@ -1,4 +1,5 @@
 import type { ConnectionStates } from '../domain/connection-states.ts';
+import { flatPaceFrom } from '../domain/flat-pace.ts';
 import { firstImportStart, isRecordedRunSport, toTrack } from '../domain/recorded-run.ts';
 import type { RecordedRunRepository } from '../domain/recorded-run-repository.ts';
 import {
@@ -115,7 +116,15 @@ export class StravaConnections {
     await connections.delete(visitorId);
   }
 
-  /** Imports, oldest first, the running outings started since the latest Recorded Run. */
+  /** The Flat Pace worked out from the Visitor's Recorded Runs, if any. */
+  async flatPace(visitorId: string): Promise<number | undefined> {
+    return (await this.dependencies.connections.find(visitorId))?.flatPace;
+  }
+
+  /**
+   * Imports, oldest first, the running outings started since the latest Recorded Run,
+   * then works out the Flat Pace again from the last months' ones.
+   */
   private async importRuns(connection: StravaConnection): Promise<void> {
     const { connections, runs, gateway, now } = this.dependencies;
     await this.watchingForLoss(connection, async () => {
@@ -135,7 +144,14 @@ export class StravaConnections {
     });
     const current = await connections.find(connection.visitorId);
     if (current) {
-      await connections.save({ ...current, lastSyncAt: now() });
+      const { flatPace: _previous, ...rest } = current;
+      const tracks = await runs.tracksSince(current.visitorId, firstImportStart(now()));
+      const flatPace = flatPaceFrom(tracks);
+      await connections.save({
+        ...rest,
+        lastSyncAt: now(),
+        ...(flatPace !== undefined && { flatPace }),
+      });
     }
   }
 

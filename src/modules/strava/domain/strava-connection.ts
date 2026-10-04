@@ -23,6 +23,8 @@ export interface StravaConnection {
   readonly lastSyncAt?: Date;
   /** When Strava stopped accepting the connection: the Visitor withdrew ClimbSpot there. */
   readonly lostAt?: Date;
+  /** The Flat Pace worked out from the Recorded Runs, in seconds per kilometre. */
+  readonly flatPace?: number;
 }
 
 /** Strava is down, or its limits are reached: trying again later may work. */

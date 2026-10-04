@@ -1,0 +1,1 @@
+ALTER TABLE "strava_connections" ADD COLUMN "flat_pace" double precision;

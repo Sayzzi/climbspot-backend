@@ -6,8 +6,30 @@ export interface Account {
   readonly visitorId: string;
   readonly displayName: string;
   readonly email: string | undefined;
-  /** Seconds per kilometre, once stated. */
+  /** The Flat Pace the Visitor stated, in seconds per kilometre. */
   readonly flatPace: number | undefined;
+}
+
+/** Where a Flat Pace comes from: the Visitor, or their Recorded Runs on Strava. */
+export type FlatPaceSource = 'stated' | 'strava';
+
+export interface FlatPace {
+  readonly secondsPerKm: number;
+  readonly source: FlatPaceSource;
+}
+
+/** An account, with the Flat Pace that applies to it. */
+export interface MyAccount {
+  readonly account: Account;
+  readonly flatPace: FlatPace | undefined;
+}
+
+/** The Flat Pace that applies: the one the Visitor stated, or else Strava's. */
+export function flatPaceOf(account: Account, fromStrava: number | undefined): FlatPace | undefined {
+  if (account.flatPace !== undefined) {
+    return { secondsPerKm: account.flatPace, source: 'stated' };
+  }
+  return fromStrava === undefined ? undefined : { secondsPerKm: fromStrava, source: 'strava' };
 }
 
 /** Display names are at most this long. */

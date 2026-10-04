@@ -27,11 +27,11 @@ export interface FakeOuting extends StravaOuting {
 
 /**
  * Samples recorded every `spacing` metres while running due north of `from` at a
- * steady `secondsPerKm`, with a constant altitude.
+ * steady `secondsPerKm`, on a steady `gradient` (flat unless told otherwise).
  */
 export function runNorth(
   length: number,
-  { from = REFERENCE, secondsPerKm = 300, spacing = 2, altitude = 200 } = {},
+  { from = REFERENCE, secondsPerKm = 300, spacing = 2, altitude = 200, gradient = 0 } = {},
 ): TrackSample[] {
   return Array.from({ length: Math.floor(length / spacing) + 1 }, (_, index) => {
     const distance = index * spacing;
@@ -40,7 +40,13 @@ export function runNorth(
       longitude: from.longitude,
     };
     const time = (distance / 1000) * secondsPerKm;
-    return { ...position, altitude, distance, elapsed: time, moving: true };
+    return {
+      ...position,
+      altitude: altitude + distance * gradient,
+      distance,
+      elapsed: time,
+      moving: true,
+    };
   });
 }
 
