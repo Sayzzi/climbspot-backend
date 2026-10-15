@@ -43,7 +43,9 @@ describe('SignedConnectionStates', () => {
     const state = new SignedConnectionStates(KEY, time.now).issue(ADA);
     const states = new SignedConnectionStates(KEY, time.now);
 
-    expect(states.belongsTo(`${state.slice(0, -1)}A`, ADA)).toBe(false);
+    // The signature's last character carries 4 bits: one in 16 already is an "A".
+    const altered = `${state.slice(0, -1)}${state.endsWith('A') ? 'E' : 'A'}`;
+    expect(states.belongsTo(altered, ADA)).toBe(false);
     expect(
       new SignedConnectionStates(Buffer.alloc(32, 6).toString('base64'), time.now).belongsTo(
         state,
