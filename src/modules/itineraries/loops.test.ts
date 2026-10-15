@@ -175,6 +175,35 @@ describe('POST /itineraries/loops', () => {
     expect(calls.routeThrough).toHaveLength(4);
   });
 
+  it('does not offer the same Loop again in the opposite direction', async () => {
+    const path = legs(START, [0, 1400], [90, 1400], [180, 1400], [270, 1400]);
+    let calls = 0;
+    const { provider } = fakeRouting({
+      elevationAt: risingNorth(0),
+      routeThrough: () => (++calls % 2 === 0 ? path.toReversed() : path),
+    });
+    const response = await askLoops(itinerariesApp(provider), ask());
+    expect(response.status).toBe(200);
+    expect(loops(response.body)).toHaveLength(1);
+  });
+
+  it('prefers a circuit to an out-and-back when both match the asked Relief', async () => {
+    const backtrack = legs(START, [0, 2800], [180, 2800]);
+    const circuit = legs(START, [0, 1400], [90, 1400], [180, 1400], [270, 1400]);
+    let calls = 0;
+    const { provider } = fakeRouting({
+      elevationAt: risingNorth(0),
+      routeThrough: () => (++calls === 1 ? backtrack : circuit),
+    });
+    const response = await askLoops(itinerariesApp(provider), ask());
+    const found = loops(response.body);
+    expect(found).toHaveLength(2);
+    // Only the circuit goes east of the start.
+    expect(
+      found[0]?.path.coordinates.some(([longitude]) => longitude > START.longitude + 0.01),
+    ).toBe(true);
+  });
+
   it('never offers a Loop that cannot be brought to the asked length', async () => {
     // Whatever the waypoints, the ways make a 20 km detour.
     const { provider } = fakeRouting({

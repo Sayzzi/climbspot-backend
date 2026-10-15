@@ -120,14 +120,43 @@ export function toLoop(path: SurveyedPath, request: LoopRequest): LoopItinerary 
   };
 }
 
-/** Matching Relief first, then Height Gained closest to the asked band. */
+/** Matching Relief, then closest Height Gained to its band, then least retracing. */
 export function rankLoops(loops: readonly LoopItinerary[], request: LoopRequest): LoopItinerary[] {
   const gap = (loop: LoopItinerary) =>
     distanceToBand(heightGainedPerKm(loop.measurements), request.relief);
-  return [...loops].sort((a, b) => Number(b.exact) - Number(a.exact) || gap(a) - gap(b));
+  const repeated = new Map(loops.map((loop) => [loop, repeatedShare(loop.path)]));
+  return [...loops].sort(
+    (a, b) =>
+      Number(b.exact) - Number(a.exact) ||
+      gap(a) - gap(b) ||
+      (repeated.get(a) ?? 0) - (repeated.get(b) ?? 0),
+  );
 }
 
-/** Two Loops are the same when they pass by the same places a third and two thirds of the way. */
+/**
+ * Share of the path retracing an identical edge, in either direction. Coordinates
+ * rounded to six decimals absorb arithmetic noise (~0.1 m), not nearby parallel
+ * ways. This is conservative: differently segmented edges are not counted as equal.
+ */
+function repeatedShare(path: readonly Position[]): number {
+  const seen = new Set<string>();
+  let total = 0;
+  let repeated = 0;
+  const key = (point: Position) => `${point.longitude.toFixed(6)},${point.latitude.toFixed(6)}`;
+  for (let index = 1; index < path.length; index += 1) {
+    const from = path[index - 1];
+    const to = path[index];
+    if (from === undefined || to === undefined) continue;
+    const length = distanceBetween(from, to);
+    const edge = [key(from), key(to)].sort().join('|');
+    total += length;
+    if (seen.has(edge)) repeated += length;
+    seen.add(edge);
+  }
+  return total > 0 ? repeated / total : 0;
+}
+
+/** Two Loops passing the same marks are duplicates, including in the opposite direction. */
 export function isSameLoop(a: LoopItinerary, b: LoopItinerary): boolean {
   const marks = (loop: LoopItinerary) => {
     const surveyed = {
@@ -139,12 +168,14 @@ export function isSameLoop(a: LoopItinerary, b: LoopItinerary): boolean {
     return [length / 3, (2 * length) / 3].map((at) => geometryBetween(surveyed, at, at)[0]);
   };
   const [aMarks, bMarks] = [marks(a), marks(b)];
-  return aMarks.every((mark, index) => {
-    const other = bMarks[index];
-    return (
-      mark !== undefined &&
-      other !== undefined &&
-      distanceBetween(mark, other) < SAME_ITINERARY_DISTANCE
-    );
-  });
+  const sameOrder = (otherMarks: typeof bMarks) =>
+    aMarks.every((mark, index) => {
+      const other = otherMarks[index];
+      return (
+        mark !== undefined &&
+        other !== undefined &&
+        distanceBetween(mark, other) < SAME_ITINERARY_DISTANCE
+      );
+    });
+  return sameOrder(bMarks) || sameOrder([...bMarks].reverse());
 }

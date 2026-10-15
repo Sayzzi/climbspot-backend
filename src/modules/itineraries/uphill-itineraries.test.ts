@@ -258,7 +258,7 @@ describe('POST /itineraries/uphill', () => {
     await askUphill(itinerariesApp(provider), ask({ activity: 'road_cycling', length: 2000 }));
 
     expect(calls.roundTrip.length).toBeGreaterThan(0);
-    expect(calls.roundTrip.length + calls.routeTowards.length).toBeLessThanOrEqual(10);
+    expect(calls.roundTrip.length + calls.routeTowards.length).toBeLessThanOrEqual(40);
     expect(new Set(calls.roundTrip.map((call) => call.variant)).size).toBe(calls.roundTrip.length);
     for (const call of calls.roundTrip) {
       expect(call).toMatchObject({ activity: 'road_cycling', length: 5000, start: START });
@@ -310,6 +310,18 @@ describe('POST /itineraries/uphill', () => {
     expect(running?.effort?.flatEquivalentDistance).toBeGreaterThan(running?.length ?? Infinity);
     expect(cycling).toBeDefined();
     expect(cycling).not.toHaveProperty('effort');
+  });
+
+  it('finds a nearby uphill way when destinations farther out have no road', async () => {
+    const { provider } = fakeRouting({
+      elevationAt: planar(0.04),
+      roundTrip: () => undefined,
+      routeTowards: ({ start, destination }) =>
+        distanceBetween(start, destination) < 5000 ? legs(start, [0, 2000]) : undefined,
+    });
+    const response = await askUphill(itinerariesApp(provider), ask({ radius: 10000 }));
+    expect(response.status).toBe(200);
+    expect(itineraries(response.body)[0]).toMatchObject({ exact: true });
   });
 
   it('answers an empty list when no way can be found', async () => {

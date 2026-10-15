@@ -29,8 +29,8 @@ export const UPHILL_ROUND_TRIP_FACTOR = 2.5;
  */
 export const UPHILL_SPOKE_BEARINGS = [0, 180, 90, 270, 45, 225, 135, 315] as const;
 
-/** How far those ways head, as a share of the radius. */
-export const UPHILL_SPOKE_REACH = 0.8;
+/** Explore further ways first, then nearer ones that may take different branches. */
+export const UPHILL_SPOKE_REACHES = [0.8, 0.4] as const;
 
 /**
  * Bearings at which Loops are tried, in degrees: each sends the Loop another way. The

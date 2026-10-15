@@ -5,7 +5,7 @@ import {
   UPHILL_ROUND_TRIP_FACTOR,
   UPHILL_ROUND_TRIPS,
   UPHILL_SPOKE_BEARINGS,
-  UPHILL_SPOKE_REACH,
+  UPHILL_SPOKE_REACHES,
 } from '../domain/itinerary-rules.ts';
 import type { RoutedPath, RoutingProvider } from '../domain/routing-provider.ts';
 
@@ -31,9 +31,11 @@ export function uphillExplorations(
     (_, index) => () =>
       routing.roundTrip(start, length * UPHILL_ROUND_TRIP_FACTOR, activity, index + 1),
   );
-  const spokes = UPHILL_SPOKE_BEARINGS.map(
-    (bearing) => () =>
-      routing.routeTowards(start, offset(start, bearing, radius * UPHILL_SPOKE_REACH), activity),
+  const spokes = UPHILL_SPOKE_REACHES.flatMap((reach) =>
+    UPHILL_SPOKE_BEARINGS.map(
+      (bearing) => () =>
+        routing.routeTowards(start, offset(start, bearing, radius * reach), activity),
+    ),
   );
   return [...roundTrips, ...spokes];
 }
