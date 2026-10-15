@@ -10,7 +10,7 @@ REST API for ClimbSpot: find uphill paths (**Ascents**) near you for running, tr
 
 | Concern      | Choice                                                                                                              |
 | ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| Runtime      | Node.js 22 (ESM)                                                                                                    |
+| Runtime      | Node.js 26 (ESM)                                                                                                    |
 | HTTP         | Express 5, helmet, cors                                                                                             |
 | Validation   | zod 4                                                                                                               |
 | API contract | OpenAPI 3.1 generated from zod schemas, served at `GET /openapi.json`                                               |
@@ -22,7 +22,7 @@ REST API for ClimbSpot: find uphill paths (**Ascents**) near you for running, tr
 
 ## Getting started
 
-Requirements: Node.js ≥ 22.12 (see `.nvmrc`) and pnpm (`corepack enable`).
+Requirements: Node.js ≥ 26 (see `.nvmrc`) and pnpm (`corepack enable`).
 
 ```bash
 pnpm install

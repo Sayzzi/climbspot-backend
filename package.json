@@ -5,7 +5,7 @@
   "description": "ClimbSpot REST API: find and catalogue uphill paths for running and cycling.",
   "type": "module",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=26"
   },
   "packageManager": "pnpm@11.20.0",
   "scripts": {
@@ -48,7 +48,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/multer": "^2.3.0",
-    "@types/node": "^22.20.4",
+    "@types/node": "^26.6.5",
     "@types/supertest": "^7.2.1",
     "@vitest/coverage-v8": "^5.0.3",
     "drizzle-kit": "^0.31.11",
