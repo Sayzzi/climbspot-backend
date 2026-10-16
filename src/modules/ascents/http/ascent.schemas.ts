@@ -116,11 +116,17 @@ const myAscentTimesSummarySchema = z
   .object({
     best: z.int().meta({ description: 'Seconds.' }),
     count: z.int().positive(),
+    latest: z
+      .object({
+        startedAt: z.iso.datetime().meta({ description: 'When the Visitor left the Start.' }),
+        seconds: z.int(),
+      })
+      .meta({ description: 'Their most recent Ascent Time here.' }),
   })
   .optional()
   .meta({
     description:
-      "The signed-in Visitor's best Ascent Time here and how many they have; only for them, and only when they have one.",
+      "The signed-in Visitor's best Ascent Time here, how many they have and their latest; only for them, and only when they have one.",
   });
 
 export const nearbyAscentsSchema = z

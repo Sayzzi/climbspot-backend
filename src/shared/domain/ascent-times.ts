@@ -9,8 +9,12 @@ export interface AscentPath {
   readonly path: readonly Position[];
 }
 
-/** A Visitor's best Ascent Time on an Ascent, in seconds, and how many they have there. */
+/**
+ * A Visitor's Ascent Times on an Ascent, summed up: their best (seconds), how many they
+ * have there, and their latest (when they left the Start, and how long they took).
+ */
 export interface AscentTimeSummary {
   readonly best: number;
   readonly count: number;
+  readonly latest: { readonly startedAt: Date; readonly seconds: number };
 }

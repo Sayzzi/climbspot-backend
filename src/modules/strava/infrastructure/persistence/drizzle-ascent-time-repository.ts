@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, min } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, max, min, sql } from 'drizzle-orm';
 
 import type { Database } from '../../../../shared/infrastructure/database.ts';
 import type { AscentTimeSummary } from '../../../../shared/domain/ascent-times.ts';
@@ -26,13 +26,28 @@ export class DrizzleAscentTimeRepository implements AscentTimeRepository {
       return new Map();
     }
     const rows = await this.db
-      .select({ ascentId: ascentTimes.ascentId, best: min(ascentTimes.seconds), count: count() })
+      .select({
+        ascentId: ascentTimes.ascentId,
+        best: min(ascentTimes.seconds),
+        count: count(),
+        latestStartedAt: max(ascentTimes.startedAt),
+        latestSeconds: sql<number>`(array_agg(${ascentTimes.seconds} order by ${ascentTimes.startedAt} desc))[1]`,
+      })
       .from(ascentTimes)
       .where(
         and(eq(ascentTimes.visitorId, visitorId), inArray(ascentTimes.ascentId, [...ascentIds])),
       )
       .groupBy(ascentTimes.ascentId);
-    return new Map(rows.map((row) => [row.ascentId, { best: row.best ?? 0, count: row.count }]));
+    return new Map(
+      rows.map((row) => [
+        row.ascentId,
+        {
+          best: row.best ?? 0,
+          count: row.count,
+          latest: { startedAt: row.latestStartedAt ?? new Date(0), seconds: row.latestSeconds },
+        },
+      ]),
+    );
   }
 
   of(visitorId: string, ascentId: string): Promise<AscentTime[]> {

@@ -2,7 +2,7 @@ import { toEffortResponse } from '../../../shared/http/effort.ts';
 import { activitiesFor, canBeRun } from '../domain/activity.ts';
 import type { NearbyAscentResult } from '../application/find-ascents-nearby.ts';
 import type { FavouriteAscentResult } from '../application/list-favourite-ascents.ts';
-import type { PersonalAscentTime } from '../domain/personal-ascent-times.ts';
+import type { AscentTimeSummary, PersonalAscentTime } from '../domain/personal-ascent-times.ts';
 import { summarize, type Ascent, type AscentPoint, type AscentSummary } from '../domain/ascent.ts';
 import type {
   AscentResponse,
@@ -74,9 +74,17 @@ export function toNearbyAscentsResponse(
     ascents: results.map(({ ascent, distanceToStart, myAscentTimes, favourite }) => ({
       ...toAscentSummaryResponse(ascent),
       distanceToStart: round(distanceToStart, 1),
-      ...(myAscentTimes && { myAscentTimes }),
+      ...(myAscentTimes && { myAscentTimes: toAscentTimeSummaryResponse(myAscentTimes) }),
       ...(favourite !== undefined && { favourite }),
     })),
+  };
+}
+
+function toAscentTimeSummaryResponse({ best, count, latest }: AscentTimeSummary) {
+  return {
+    best,
+    count,
+    latest: { startedAt: latest.startedAt.toISOString(), seconds: latest.seconds },
   };
 }
 
@@ -86,7 +94,7 @@ export function toFavouriteAscentsResponse(
   return {
     ascents: results.map(({ ascent, myAscentTimes }) => ({
       ...toAscentSummaryResponse(ascent),
-      ...(myAscentTimes && { myAscentTimes }),
+      ...(myAscentTimes && { myAscentTimes: toAscentTimeSummaryResponse(myAscentTimes) }),
     })),
   };
 }

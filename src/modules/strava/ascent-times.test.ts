@@ -126,6 +126,21 @@ describe('Ascent Times', () => {
     expect(ascentTimes).toEqual([{ startedAt: expect.any(String) as unknown, seconds: 300 }]);
   });
 
+  it('give the latest run up besides the best', async () => {
+    const up = (secondsPerKm: number) =>
+      legThrough([south(50), ...northOf(REFERENCE, 1050)], secondsPerKm);
+    const down = legThrough([...northOf(REFERENCE, 1050), south(50)], 300);
+    const { app } = await runAfterAscent(recording(up(330), down, up(360)));
+
+    const [found] = await nearbyFor(app, VISITOR_A);
+    expect(found).toMatchObject({
+      myAscentTimes: { best: 330, count: 2, latest: { seconds: 360 } },
+    });
+    const { latest } = (found as { myAscentTimes: { latest: { startedAt: string } } })
+      .myAscentTimes;
+    expect(new Date(latest.startedAt).toISOString()).toBe(latest.startedAt);
+  });
+
   it('count each repeat up, not the way down', async () => {
     const up = (secondsPerKm: number) =>
       legThrough([south(50), ...northOf(REFERENCE, 1050)], secondsPerKm);

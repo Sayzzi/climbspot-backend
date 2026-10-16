@@ -201,7 +201,18 @@ describe('GET /ascents/favourites', () => {
     const app = buildApp({
       ascentTimes: {
         summaries: (_visitor, ids) =>
-          Promise.resolve(new Map(ids.map((id) => [id, { best: 312, count: 3 }]))),
+          Promise.resolve(
+            new Map(
+              ids.map((id) => [
+                id,
+                {
+                  best: 312,
+                  count: 3,
+                  latest: { startedAt: new Date('2026-10-02T07:10:00Z'), seconds: 320 },
+                },
+              ]),
+            ),
+          ),
         of: () => Promise.resolve([]),
       },
     });
@@ -210,7 +221,14 @@ describe('GET /ascents/favourites', () => {
 
     const response = await request(app).get('/ascents/favourites').set(as(VISITOR_A));
 
-    expect(response.body.ascents[0]).toMatchObject({ id, myAscentTimes: { best: 312, count: 3 } });
+    expect(response.body.ascents[0]).toMatchObject({
+      id,
+      myAscentTimes: {
+        best: 312,
+        count: 3,
+        latest: { startedAt: '2026-10-02T07:10:00.000Z', seconds: 320 },
+      },
+    });
   });
 
   it('is empty for a Visitor without favourites', async () => {
