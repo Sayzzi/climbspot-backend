@@ -22,7 +22,11 @@ describe('TokenVault', () => {
 
   it('refuses a token sealed with another key, or altered', () => {
     const sealed = new TokenVault(KEY).seal('token');
-    const altered = `${sealed.slice(0, -2)}AA`;
+    // Flip one byte of the encrypted part: replacing characters may decode to the same bytes.
+    const [version, iv, tag, encrypted = ''] = sealed.split('.');
+    const bytes = Buffer.from(encrypted, 'base64url');
+    bytes.writeUInt8((bytes.readUInt8(0) ^ 0xff) & 0xff, 0);
+    const altered = [version, iv, tag, bytes.toString('base64url')].join('.');
 
     expect(() => new TokenVault(Buffer.alloc(32, 4).toString('base64')).open(sealed)).toThrow();
     expect(() => new TokenVault(KEY).open(altered)).toThrow();
