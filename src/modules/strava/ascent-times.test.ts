@@ -130,11 +130,12 @@ describe('Ascent Times', () => {
     const up = (secondsPerKm: number) =>
       legThrough([south(50), ...northOf(REFERENCE, 1050)], secondsPerKm);
     const down = legThrough([...northOf(REFERENCE, 1050), south(50)], 300);
-    const { app } = await runAfterAscent(recording(up(330), down, up(360)));
+    // The latest is neither the best nor the slowest.
+    const { app } = await runAfterAscent(recording(up(330), down, up(400), down, up(360)));
 
     const [found] = await nearbyFor(app, VISITOR_A);
     expect(found).toMatchObject({
-      myAscentTimes: { best: 330, count: 2, latest: { seconds: 360 } },
+      myAscentTimes: { best: 330, count: 3, latest: { seconds: 360 } },
     });
     const { latest } = (found as { myAscentTimes: { latest: { startedAt: string } } })
       .myAscentTimes;
@@ -226,7 +227,7 @@ describe('Ascent Times', () => {
 });
 
 describe('GET /ascents/my-times', () => {
-  const ranBy = async (app: App, visitor?: typeof VISITOR_A) => {
+  const withTimesOf = async (app: App, visitor?: typeof VISITOR_A) => {
     const call = request(app).get('/ascents/my-times');
     return visitor ? call.set(as(visitor)) : call;
   };
@@ -237,11 +238,11 @@ describe('GET /ascents/my-times', () => {
       outings: {
         [ADA]: [
           anOuting({
-            daysAgo: 5,
+            daysAgo: 2,
             samples: legThrough([south(50), ...northOf(REFERENCE, 1050)], 330),
           }),
           anOuting({
-            daysAgo: 2,
+            daysAgo: 5,
             samples: legThrough(
               [
                 { ...elsewhere, latitude: elsewhere.latitude - 50 / METRES_PER_DEGREE_OF_LATITUDE },
@@ -260,14 +261,20 @@ describe('GET /ascents/my-times', () => {
     ).body.id as string;
     await connect(app, VISITOR_A);
 
-    const response = await ranBy(app, VISITOR_A);
+    const response = await withTimesOf(app, VISITOR_A);
 
     expect(response.status).toBe(200);
     const listed = (
       response.body as { ascents: { id: string; myAscentTimes: Record<string, unknown> }[] }
     ).ascents;
-    expect(listed.map((ascent) => ascent.id)).toEqual([second, first]);
+    // The first one added is the one run most recently.
+    expect(listed.map((ascent) => ascent.id)).toEqual([first, second]);
     expect(listed[0]?.myAscentTimes).toMatchObject({
+      best: 330,
+      count: 1,
+      latest: { seconds: 330 },
+    });
+    expect(listed[1]?.myAscentTimes).toMatchObject({
       best: 360,
       count: 1,
       latest: { seconds: 360 },
@@ -278,13 +285,13 @@ describe('GET /ascents/my-times', () => {
   it('lists nothing of another Visitor’s, and nothing without times', async () => {
     const { app } = await runAfterAscent(upTheAscent(300));
 
-    expect((await ranBy(app, VISITOR_B)).body).toEqual({ ascents: [] });
+    expect((await withTimesOf(app, VISITOR_B)).body).toEqual({ ascents: [] });
   });
 
   it('needs a signed-in Visitor', async () => {
     const { app } = await runAfterAscent(upTheAscent(300));
 
-    expect((await ranBy(app)).status).toBe(401);
+    expect((await withTimesOf(app)).status).toBe(401);
   });
 
   it('is described in the OpenAPI document', async () => {

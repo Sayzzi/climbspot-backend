@@ -213,7 +213,7 @@ describe('GET /ascents/favourites', () => {
               ]),
             ),
           ),
-        ranBy: () => Promise.resolve(new Map()),
+        withTimesOf: () => Promise.resolve(new Map()),
         of: () => Promise.resolve([]),
       },
     });

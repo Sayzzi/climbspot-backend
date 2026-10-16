@@ -30,7 +30,7 @@ export class DrizzleAscentTimeRepository implements AscentTimeRepository {
     );
   }
 
-  ranBy(visitorId: string): Promise<ReadonlyMap<string, AscentTimeSummary>> {
+  withTimesOf(visitorId: string): Promise<ReadonlyMap<string, AscentTimeSummary>> {
     return this.summarised(eq(ascentTimes.visitorId, visitorId));
   }
 
@@ -45,7 +45,8 @@ export class DrizzleAscentTimeRepository implements AscentTimeRepository {
         best: min(ascentTimes.seconds),
         count: count(),
         latestStartedAt,
-        latestSeconds: sql<number>`(array_agg(${ascentTimes.seconds} order by ${ascentTimes.startedAt} desc))[1]`,
+        // Two Recorded Runs of the same outing (watch and phone) can start together.
+        latestSeconds: sql<number>`(array_agg(${ascentTimes.seconds} order by ${ascentTimes.startedAt} desc, ${ascentTimes.stravaId} desc))[1]`,
       })
       .from(ascentTimes)
       .where(where)

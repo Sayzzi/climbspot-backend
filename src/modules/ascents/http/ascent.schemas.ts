@@ -156,7 +156,7 @@ export const favouriteAscentsSchema = z
 
 export type FavouriteAscentsResponse = z.infer<typeof favouriteAscentsSchema>;
 
-export const ascentsRunSchema = z
+export const ascentsWithMyTimesSchema = z
   .object({
     ascents: z.array(
       ascentSummarySchema.extend({
@@ -164,9 +164,9 @@ export const ascentsRunSchema = z
       }),
     ),
   })
-  .meta({ id: 'AscentsRun' });
+  .meta({ id: 'AscentsWithMyTimes' });
 
-export type AscentsRunResponse = z.infer<typeof ascentsRunSchema>;
+export type AscentsWithMyTimesResponse = z.infer<typeof ascentsWithMyTimesSchema>;
 
 export const myAscentTimesSchema = z
   .object({

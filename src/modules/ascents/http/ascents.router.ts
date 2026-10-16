@@ -12,14 +12,14 @@ import type {
 import type { FindAscentsNearby } from '../application/find-ascents-nearby.ts';
 import type { GetAscent } from '../application/get-ascent.ts';
 import type { GetMyAscentTimes } from '../application/get-my-ascent-times.ts';
-import type { ListAscentsRun } from '../application/list-ascents-run.ts';
+import type { ListAscentsWithMyTimes } from '../application/list-ascents-with-my-times.ts';
 import type { ListFavouriteAscents } from '../application/list-favourite-ascents.ts';
 import { GpxTooLargeError } from '../domain/ascent-errors.ts';
 import { MAXIMUM_GPX_FILE_SIZE } from '../domain/ascent-rules.ts';
 import type { PathReader } from '../domain/path-reader.ts';
 import {
   toAscentResponse,
-  toAscentsRunResponse,
+  toAscentsWithMyTimesResponse,
   toFavouriteAscentsResponse,
   toMyAscentTimesResponse,
   toNearbyAscentsResponse,
@@ -38,7 +38,7 @@ export interface AscentsRouterDependencies {
   readonly markFavouriteAscent: MarkFavouriteAscent;
   readonly unmarkFavouriteAscent: UnmarkFavouriteAscent;
   readonly listFavouriteAscents: ListFavouriteAscents;
-  readonly listAscentsRun: ListAscentsRun;
+  readonly listAscentsWithMyTimes: ListAscentsWithMyTimes;
   readonly readGpxPath: PathReader;
 }
 
@@ -54,7 +54,7 @@ export function createAscentsRouter({
   markFavouriteAscent,
   unmarkFavouriteAscent,
   listFavouriteAscents,
-  listAscentsRun,
+  listAscentsWithMyTimes,
   readGpxPath,
 }: AscentsRouterDependencies): Router {
   const router = Router();
@@ -114,10 +114,11 @@ export function createAscentsRouter({
     res.json(toFavouriteAscentsResponse(await listFavouriteAscents.execute(visitorId)));
   });
 
+  // Declared before `/:id`, which would otherwise capture it.
   router.get('/my-times', async (_req, res) => {
     const { visitorId } = signedInVisitor(res);
 
-    res.json(toAscentsRunResponse(await listAscentsRun.execute(visitorId)));
+    res.json(toAscentsWithMyTimesResponse(await listAscentsWithMyTimes.execute(visitorId)));
   });
 
   router.get('/:id', async (req, res) => {

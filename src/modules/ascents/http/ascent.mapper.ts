@@ -1,14 +1,14 @@
 import { toEffortResponse } from '../../../shared/http/effort.ts';
 import { activitiesFor, canBeRun } from '../domain/activity.ts';
 import type { NearbyAscentResult } from '../application/find-ascents-nearby.ts';
-import type { AscentRunResult } from '../application/list-ascents-run.ts';
+import type { AscentWithMyTimesResult } from '../application/list-ascents-with-my-times.ts';
 import type { FavouriteAscentResult } from '../application/list-favourite-ascents.ts';
 import type { AscentTimeSummary, PersonalAscentTime } from '../domain/personal-ascent-times.ts';
 import { summarize, type Ascent, type AscentPoint, type AscentSummary } from '../domain/ascent.ts';
 import type {
   AscentResponse,
   AscentSummaryResponse,
-  AscentsRunResponse,
+  AscentsWithMyTimesResponse,
   FavouriteAscentsResponse,
   MyAscentTimesResponse,
   NearbyAscentsResponse,
@@ -101,7 +101,9 @@ export function toFavouriteAscentsResponse(
   };
 }
 
-export function toAscentsRunResponse(results: readonly AscentRunResult[]): AscentsRunResponse {
+export function toAscentsWithMyTimesResponse(
+  results: readonly AscentWithMyTimesResult[],
+): AscentsWithMyTimesResponse {
   return {
     ascents: results.map(({ ascent, myAscentTimes }) => ({
       ...toAscentSummaryResponse(ascent),
