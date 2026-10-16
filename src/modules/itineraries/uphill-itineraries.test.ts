@@ -268,6 +268,22 @@ describe('POST /itineraries/uphill', () => {
     }
   });
 
+  it('heads out far in every direction first, then nearer, when nothing is found', async () => {
+    const { provider, calls } = fakeRouting({
+      elevationAt: planar(0.04),
+      roundTrip: () => undefined,
+      routeTowards: () => undefined,
+    });
+
+    await askUphill(itinerariesApp(provider), ask({ radius: 10000 }));
+
+    expect(calls.roundTrip).toHaveLength(2);
+    const reaches = calls.routeTowards.map(
+      (call) => Math.round(distanceBetween(START, call.destination) / 100) * 100,
+    );
+    expect(reaches).toEqual([...Array<number>(8).fill(8000), ...Array<number>(8).fill(4000)]);
+  });
+
   it('stops asking once three exact stretches are found', async () => {
     const bearings: Record<number, number> = { 1: 0, 2: 30 };
     const { provider, calls } = fakeRouting({

@@ -19,14 +19,22 @@ The exact counts did not change after this calibration. All twelve scenarios sti
 
 Retracing counts an undirected geometry edge every time after its first traversal, weighted by its length. Coordinates rounded to six decimals absorb arithmetic noise (about 0.1 m). It undercounts differently segmented versions of the same way and is not a measure of road safety or surface quality. The reversed-Loop check remains a landmark heuristic, not a full geometric overlap test.
 
+## Checked afterwards (16 October 2026)
+
+Replaying the recorded responses gives the same proposals as above. Three further checks:
+
+- **Retracing measure.** Against a spatial measure (the share of the path, sampled every 20 m, passing within 12 m of where it already went at least 150 m earlier), the edge measure differs by at most 2 points on every proposal, and orders the proposals the same way except two Lille flat Loops less than a point apart. It is kept: the routing engine retraces a way over the same vertices, so the undercount the edge measure allows for does not show on real answers, and it costs no sampling.
+- **Nearer spokes.** Skipping a nearer spoke whose destination a farther way already passed within 300 m saves 3 of the 18 calls at Tournai and Lille with identical proposals, but loses a Lille alternative from 600 m. Not worth a further rule while routing is self-hosted.
+- **Duplicates.** The same circuit found twice now keeps its better form (exact first, then closest Relief, then least retracing) instead of the first one found. No recorded scenario has such a pair, so the results above are unchanged; a regression test covers it.
+
 ## Reproduction and limits
 
-The workspace diagnostic harness is `.design/engine-benchmark/run.mts`, outside this repository, run from the workspace root with:
+The benchmark lives in the repository: `routing/benchmark.ts`, run with
 
 ```sh
-node --import ./climbspot-backend/node_modules/tsx/dist/loader.mjs .design/engine-benchmark/run.mts final
+pnpm bench:itineraries <label>
 ```
 
-It calls the real use cases and local routing adapter directly (bypassing the application planning cache), asserts length and Loop endpoint bounds, and caches routing responses in `responses.json` for comparable replays. `baseline.json` records the initial run, `multiscale.json` the intermediate exploration change, and `final.json` the final results including retracing. Replay timings must not be presented as end-to-end latency measurements: the captured response cache removes network and routing work.
+It calls the real use cases and the routing adapter directly (bypassing the application planning cache), asserts the length rule and Loop end bounds, and records routing responses in `routing/.benchmark/responses.json` (not versioned), so that later runs replay the same answers without the routing engine. Results go to `routing/.benchmark/<label>.json`. Replayed timings must not be presented as end-to-end latency measurements: the recorded responses remove network and routing work.
 
 Coverage is deliberately limited to these four points, one Activity, and the map already imported locally. This does not validate cycling, arbitrary start points, all distances, seasonal access or elevation accuracy. Substantial retracing remains at Chamonix; generating better candidates rather than only ranking the existing ones is a separate next improvement.

@@ -187,6 +187,31 @@ describe('POST /itineraries/loops', () => {
     expect(loops(response.body)).toHaveLength(1);
   });
 
+  it('keeps the better of two forms of the same circuit, whichever came first', async () => {
+    // The same square, first with a detour up a dead end and back near the start.
+    const withDetour = legs(
+      START,
+      [0, 1400],
+      [90, 1400],
+      [180, 1400],
+      [270, 1400],
+      [0, 120],
+      [180, 120],
+    );
+    const square = legs(START, [0, 1400], [90, 1400], [180, 1400], [270, 1400]);
+    let calls = 0;
+    const { provider } = fakeRouting({
+      elevationAt: risingNorth(0),
+      routeThrough: () => (++calls === 1 ? withDetour : square),
+    });
+
+    const response = await askLoops(itinerariesApp(provider), ask());
+
+    const found = loops(response.body);
+    expect(found).toHaveLength(1);
+    expect(found[0]?.length).toBeLessThan(5700);
+  });
+
   it('prefers a circuit to an out-and-back when both match the asked Relief', async () => {
     const backtrack = legs(START, [0, 2800], [180, 2800]);
     const circuit = legs(START, [0, 1400], [90, 1400], [180, 1400], [270, 1400]);

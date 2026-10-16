@@ -57,3 +57,5 @@ tmp/
 # Self-hosted routing: downloaded map extracts, built graphs, elevation tiles
 routing/sources/
 routing/ors-docker/
+# Itinerary benchmark: recorded routing responses and results
+routing/.benchmark/

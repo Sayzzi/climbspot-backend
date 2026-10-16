@@ -120,17 +120,22 @@ export function toLoop(path: SurveyedPath, request: LoopRequest): LoopItinerary 
   };
 }
 
-/** Matching Relief, then closest Height Gained to its band, then least retracing. */
-export function rankLoops(loops: readonly LoopItinerary[], request: LoopRequest): LoopItinerary[] {
+/**
+ * Orders two Loops for a request: matching Relief, then closest Height Gained to its
+ * band, then least retracing. Negative when `a` comes first.
+ */
+export function compareLoops(a: LoopItinerary, b: LoopItinerary, request: LoopRequest): number {
   const gap = (loop: LoopItinerary) =>
     distanceToBand(heightGainedPerKm(loop.measurements), request.relief);
-  const repeated = new Map(loops.map((loop) => [loop, repeatedShare(loop.path)]));
-  return [...loops].sort(
-    (a, b) =>
-      Number(b.exact) - Number(a.exact) ||
-      gap(a) - gap(b) ||
-      (repeated.get(a) ?? 0) - (repeated.get(b) ?? 0),
+  return (
+    Number(b.exact) - Number(a.exact) ||
+    gap(a) - gap(b) ||
+    retracedShare(a.path) - retracedShare(b.path)
   );
+}
+
+export function rankLoops(loops: readonly LoopItinerary[], request: LoopRequest): LoopItinerary[] {
+  return [...loops].sort((a, b) => compareLoops(a, b, request));
 }
 
 /**
@@ -138,7 +143,7 @@ export function rankLoops(loops: readonly LoopItinerary[], request: LoopRequest)
  * rounded to six decimals absorb arithmetic noise (~0.1 m), not nearby parallel
  * ways. This is conservative: differently segmented edges are not counted as equal.
  */
-function repeatedShare(path: readonly Position[]): number {
+export function retracedShare(path: readonly Position[]): number {
   const seen = new Set<string>();
   let total = 0;
   let repeated = 0;

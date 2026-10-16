@@ -13,6 +13,7 @@ import {
 } from '../domain/itinerary-rules.ts';
 import type { LoopItinerary, LoopRequest } from '../domain/itinerary.ts';
 import {
+  compareLoops,
   fitsLength,
   highPoints,
   initialLoopRadius,
@@ -108,8 +109,13 @@ class LoopSearch {
       const { length } = loop.measurements;
       if (length <= 0) return undefined;
       if (fitsLength(length, this.request.distance)) {
-        if (!this.found.some((other) => isSameLoop(other, loop))) {
+        // The same circuit found again is kept in its better form.
+        const same = this.found.findIndex((other) => isSameLoop(other, loop));
+        const kept = this.found[same];
+        if (kept === undefined) {
           this.found.push(loop);
+        } else if (compareLoops(loop, kept, this.request) < 0) {
+          this.found[same] = loop;
         }
         return size;
       }

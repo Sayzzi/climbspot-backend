@@ -48,15 +48,16 @@ Requests outside those areas find no way. To cover another area, add it to `rout
 
 ## Scripts
 
-| Script                                          | Purpose                                        |
-| ----------------------------------------------- | ---------------------------------------------- |
-| `pnpm dev`                                      | Start the API with hot reload                  |
-| `pnpm build` / `pnpm start`                     | Compile to `dist/` and run the compiled output |
-| `pnpm test` / `test:watch` / `test:coverage`    | Run the test suite                             |
-| `pnpm lint` / `lint:fix`                        | Lint, including architectural boundaries       |
-| `pnpm format` / `format:check`                  | Format with Prettier                           |
-| `pnpm typecheck`                                | Type-check sources, tests and config files     |
-| `pnpm db:generate` / `db:migrate` / `db:studio` | Drizzle migrations and studio                  |
+| Script                                          | Purpose                                                             |
+| ----------------------------------------------- | ------------------------------------------------------------------- |
+| `pnpm dev`                                      | Start the API with hot reload                                       |
+| `pnpm build` / `pnpm start`                     | Compile to `dist/` and run the compiled output                      |
+| `pnpm test` / `test:watch` / `test:coverage`    | Run the test suite                                                  |
+| `pnpm lint` / `lint:fix`                        | Lint, including architectural boundaries                            |
+| `pnpm format` / `format:check`                  | Format with Prettier                                                |
+| `pnpm typecheck`                                | Type-check sources, tests, scripts and config                       |
+| `pnpm db:generate` / `db:migrate` / `db:studio` | Drizzle migrations and studio                                       |
+| `pnpm bench:itineraries <label>`                | Replay the Itinerary search benchmark ([notes](./docs/benchmarks/)) |
 
 ### Accounts
 
