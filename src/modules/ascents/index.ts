@@ -51,7 +51,7 @@ export function createAscentsModule({
     onAscentAdded,
   });
   const getAscent = new GetAscent(repository, favourites);
-  const findAscentsNearby = new FindAscentsNearby(repository, ascentTimes);
+  const findAscentsNearby = new FindAscentsNearby(repository, ascentTimes, favourites);
   const getMyAscentTimes = new GetMyAscentTimes(repository, ascentTimes);
 
   return {

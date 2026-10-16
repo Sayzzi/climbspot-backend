@@ -123,6 +123,10 @@ export const nearbyAscentsSchema = z
             description:
               "The signed-in Visitor's best Ascent Time here and how many they have; only for them, and only when they have one.",
           }),
+        favourite: z.boolean().optional().meta({
+          description:
+            "Whether it is one of the signed-in Visitor's Favourite Ascents; absent when nobody is signed in.",
+        }),
       }),
     ),
   })

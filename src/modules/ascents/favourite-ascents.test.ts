@@ -100,6 +100,32 @@ describe('DELETE /ascents/{id}/favourite', () => {
   });
 });
 
+describe('Favourite Ascents in the nearby search', () => {
+  const nearby = async (app: ReturnType<typeof buildApp>, visitor?: Identity) => {
+    const call = request(app)
+      .get('/ascents/nearby')
+      .query({ latitude: REFERENCE.latitude, longitude: REFERENCE.longitude });
+    const { body } = await (visitor ? call.set(as(visitor)) : call);
+    return (body as { ascents: { id: string; favourite?: boolean }[] }).ascents;
+  };
+
+  it('says which results are the signed-in Visitor’s favourites, theirs only', async () => {
+    const app = buildApp();
+    const kept = await anAscent(app);
+    const other = await anAscent(app);
+    await request(app).put(`/ascents/${kept}/favourite`).set(as(VISITOR_A));
+
+    const forA = await nearby(app, VISITOR_A);
+    const forB = await nearby(app, VISITOR_B);
+    const signedOut = await nearby(app);
+
+    expect(forA.find((ascent) => ascent.id === kept)?.favourite).toBe(true);
+    expect(forA.find((ascent) => ascent.id === other)?.favourite).toBe(false);
+    expect(forB.every((ascent) => ascent.favourite === false)).toBe(true);
+    expect(signedOut.every((ascent) => !('favourite' in ascent))).toBe(true);
+  });
+});
+
 describe('Favourite Ascents in the OpenAPI document', () => {
   it('describes marking and unmarking, for signed-in Visitors', async () => {
     const { body } = await request(buildApp()).get('/openapi.json');
@@ -110,5 +136,8 @@ describe('Favourite Ascents in the OpenAPI document', () => {
     expect(path.put.responses).toHaveProperty('404');
     expect(path.delete.security).toEqual([{ bearerAuth: [] }]);
     expect(body.components.schemas.Ascent.properties).toHaveProperty('favourite');
+    expect(
+      body.components.schemas.NearbyAscents.properties.ascents.items.properties,
+    ).toHaveProperty('favourite');
   });
 });

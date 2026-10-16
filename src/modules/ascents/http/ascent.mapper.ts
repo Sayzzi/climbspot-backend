@@ -69,10 +69,11 @@ export function toNearbyAscentsResponse(
   results: readonly NearbyAscentResult[],
 ): NearbyAscentsResponse {
   return {
-    ascents: results.map(({ ascent, distanceToStart, myAscentTimes }) => ({
+    ascents: results.map(({ ascent, distanceToStart, myAscentTimes, favourite }) => ({
       ...toAscentSummaryResponse(ascent),
       distanceToStart: round(distanceToStart, 1),
       ...(myAscentTimes && { myAscentTimes }),
+      ...(favourite !== undefined && { favourite }),
     })),
   };
 }
