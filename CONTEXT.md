@@ -148,6 +148,10 @@ _Avoid_: Activity (an Activity is a way of travelling), Workout, Session
 How long a Visitor took from the Start to the Top of an Ascent during a Recorded Run, following its path. Only its owner ever sees it.
 _Avoid_: Effort, Segment time, Split
 
+**Favourite Ascent**:
+An Ascent a signed-in Visitor marked to find it again. Only they see which Ascents are their favourites; the Ascent itself is unchanged.
+_Avoid_: Bookmark, Starred Ascent, Saved Ascent (a Saved Itinerary is a different thing)
+
 ## Reserved for later
 
 Climbing sites will arrive as their own concepts (**Crag**, **Gym**, **Route**, **Boulder**). "Climb" is never used for any of them; it only names an Ascent in what Visitors read.
