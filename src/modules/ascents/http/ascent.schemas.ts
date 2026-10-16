@@ -156,6 +156,18 @@ export const favouriteAscentsSchema = z
 
 export type FavouriteAscentsResponse = z.infer<typeof favouriteAscentsSchema>;
 
+export const ascentsRunSchema = z
+  .object({
+    ascents: z.array(
+      ascentSummarySchema.extend({
+        myAscentTimes: myAscentTimesSummarySchema.unwrap(),
+      }),
+    ),
+  })
+  .meta({ id: 'AscentsRun' });
+
+export type AscentsRunResponse = z.infer<typeof ascentsRunSchema>;
+
 export const myAscentTimesSchema = z
   .object({
     ascentTimes: z.array(

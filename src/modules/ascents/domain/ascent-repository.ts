@@ -28,6 +28,8 @@ export interface AscentRepository {
   save(ascent: Ascent): Promise<void>;
   findById(id: string): Promise<Ascent | undefined>;
   exists(id: string): Promise<boolean>;
+  /** The summaries of these Ascents, in no particular order. */
+  findSummaries(ids: readonly string[]): Promise<AscentSummary[]>;
   /** A Visitor's Favourite Ascents, most recently marked first. */
   findFavourites(visitorId: string): Promise<AscentSummary[]>;
   /** Ascents whose Start is within the radius, nearest first. */

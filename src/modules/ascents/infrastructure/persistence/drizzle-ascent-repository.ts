@@ -156,6 +156,17 @@ export class DrizzleAscentRepository implements AscentRepository {
     }));
   }
 
+  async findSummaries(ids: readonly string[]): Promise<AscentSummary[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await this.db
+      .select(summaryColumns)
+      .from(ascents)
+      .where(inArray(ascents.id, [...ids]));
+    return rows.map(toSummary);
+  }
+
   async findFavourites(visitorId: string): Promise<AscentSummary[]> {
     const rows = await this.db
       .select(summaryColumns)

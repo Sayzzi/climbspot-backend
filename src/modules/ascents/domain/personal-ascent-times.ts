@@ -17,6 +17,8 @@ export interface PersonalAscentTimes {
     visitorId: string,
     ascentIds: readonly string[],
   ): Promise<ReadonlyMap<string, AscentTimeSummary>>;
+  /** Summed up on every Ascent the Visitor went up, latest run first. */
+  ranBy(visitorId: string): Promise<ReadonlyMap<string, AscentTimeSummary>>;
   /** Newest first. */
   of(visitorId: string, ascentId: string): Promise<PersonalAscentTime[]>;
 }
@@ -24,6 +26,7 @@ export interface PersonalAscentTimes {
 /** Nobody has any Ascent Time. */
 export const noAscentTimes: PersonalAscentTimes = {
   summaries: () => Promise.resolve(new Map()),
+  ranBy: () => Promise.resolve(new Map()),
   of: () => Promise.resolve([]),
 };
 

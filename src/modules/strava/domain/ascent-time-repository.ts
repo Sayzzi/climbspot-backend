@@ -9,6 +9,8 @@ export interface AscentTimeRepository {
     visitorId: string,
     ascentIds: readonly string[],
   ): Promise<ReadonlyMap<string, AscentTimeSummary>>;
+  /** The Visitor's Ascent Times summed up on every Ascent they went up, latest run first. */
+  ranBy(visitorId: string): Promise<ReadonlyMap<string, AscentTimeSummary>>;
   /** The Visitor's Ascent Times on one Ascent, newest first. */
   of(visitorId: string, ascentId: string): Promise<AscentTime[]>;
   deleteAllOf(visitorId: string): Promise<void>;

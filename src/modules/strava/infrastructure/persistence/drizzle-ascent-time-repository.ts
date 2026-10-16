@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, max, min, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, max, min, sql, type SQL } from 'drizzle-orm';
 
 import type { Database } from '../../../../shared/infrastructure/database.ts';
 import type { AscentTimeSummary } from '../../../../shared/domain/ascent-times.ts';
@@ -25,19 +25,32 @@ export class DrizzleAscentTimeRepository implements AscentTimeRepository {
     if (ascentIds.length === 0) {
       return new Map();
     }
+    return this.summarised(
+      and(eq(ascentTimes.visitorId, visitorId), inArray(ascentTimes.ascentId, [...ascentIds])),
+    );
+  }
+
+  ranBy(visitorId: string): Promise<ReadonlyMap<string, AscentTimeSummary>> {
+    return this.summarised(eq(ascentTimes.visitorId, visitorId));
+  }
+
+  /** Sums up the Ascent Times matching `where` per Ascent, the latest run first. */
+  private async summarised(
+    where: SQL | undefined,
+  ): Promise<ReadonlyMap<string, AscentTimeSummary>> {
+    const latestStartedAt = max(ascentTimes.startedAt);
     const rows = await this.db
       .select({
         ascentId: ascentTimes.ascentId,
         best: min(ascentTimes.seconds),
         count: count(),
-        latestStartedAt: max(ascentTimes.startedAt),
+        latestStartedAt,
         latestSeconds: sql<number>`(array_agg(${ascentTimes.seconds} order by ${ascentTimes.startedAt} desc))[1]`,
       })
       .from(ascentTimes)
-      .where(
-        and(eq(ascentTimes.visitorId, visitorId), inArray(ascentTimes.ascentId, [...ascentIds])),
-      )
-      .groupBy(ascentTimes.ascentId);
+      .where(where)
+      .groupBy(ascentTimes.ascentId)
+      .orderBy(desc(latestStartedAt), ascentTimes.ascentId);
     return new Map(
       rows.map((row) => [
         row.ascentId,

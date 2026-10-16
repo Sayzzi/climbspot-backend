@@ -97,6 +97,7 @@ export function stravaAscentTimes(db: Database) {
   return {
     summaries: (visitorId: string, ascentIds: readonly string[]) =>
       times.summaries(visitorId, ascentIds),
+    ranBy: (visitorId: string) => times.ranBy(visitorId),
     of: async (visitorId: string, ascentId: string) =>
       (await times.of(visitorId, ascentId)).map(({ startedAt, seconds }) => ({
         startedAt,

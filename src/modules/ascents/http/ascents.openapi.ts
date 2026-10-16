@@ -13,6 +13,7 @@ import { DIP_ALLOWANCE, DIP_ALLOWANCE_RATIO } from '../../../shared/domain/surve
 import {
   ascentIdParamsSchema,
   ascentSchema,
+  ascentsRunSchema,
   createAscentBodySchema,
   favouriteAscentsSchema,
   myAscentTimesSchema,
@@ -121,6 +122,24 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
       200: {
         description: 'Their Favourite Ascents; empty when they have none.',
         content: { 'application/json': { schema: favouriteAscentsSchema } },
+      },
+      401: errorResponse('`AUTHENTICATION_REQUIRED`: nobody is signed in.'),
+    }),
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: `${basePath}/my-times`,
+    operationId: 'listAscentsRun',
+    summary: 'The Ascents the signed-in Visitor went up, the latest run first',
+    description:
+      'Found in their Recorded Runs through their Strava Connection; only for them, with their best, count and latest Ascent Time on each.',
+    tags: ['Ascents'],
+    security: bearerAuth,
+    responses: withSignedInResponses({
+      200: {
+        description: 'The Ascents they went up; empty when none.',
+        content: { 'application/json': { schema: ascentsRunSchema } },
       },
       401: errorResponse('`AUTHENTICATION_REQUIRED`: nobody is signed in.'),
     }),

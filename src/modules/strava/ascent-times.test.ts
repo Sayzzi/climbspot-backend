@@ -224,3 +224,72 @@ describe('Ascent Times', () => {
     expect(body.paths['/ascents/{id}/my-times'].get.security).toEqual([{ bearerAuth: [] }]);
   });
 });
+
+describe('GET /ascents/my-times', () => {
+  const ranBy = async (app: App, visitor?: typeof VISITOR_A) => {
+    const call = request(app).get('/ascents/my-times');
+    return visitor ? call.set(as(visitor)) : call;
+  };
+
+  it('lists the climbs the Visitor went up, most recently run first, with their times', async () => {
+    const elsewhere = east(REFERENCE, 2000);
+    const strava = fakeStrava({
+      outings: {
+        [ADA]: [
+          anOuting({
+            daysAgo: 5,
+            samples: legThrough([south(50), ...northOf(REFERENCE, 1050)], 330),
+          }),
+          anOuting({
+            daysAgo: 2,
+            samples: legThrough(
+              [
+                { ...elsewhere, latitude: elsewhere.latitude - 50 / METRES_PER_DEGREE_OF_LATITUDE },
+                ...northOf(elsewhere, 1050),
+              ],
+              360,
+            ),
+          }),
+        ],
+      },
+    });
+    const app = buildApp({ gateway: strava.gateway });
+    const first = await addAscent(app);
+    const second = (
+      await uploadGpx(app, gpxTrack(straightNorth(elsewhere, 1000)), { as: VISITOR_B })
+    ).body.id as string;
+    await connect(app, VISITOR_A);
+
+    const response = await ranBy(app, VISITOR_A);
+
+    expect(response.status).toBe(200);
+    const listed = (
+      response.body as { ascents: { id: string; myAscentTimes: Record<string, unknown> }[] }
+    ).ascents;
+    expect(listed.map((ascent) => ascent.id)).toEqual([second, first]);
+    expect(listed[0]?.myAscentTimes).toMatchObject({
+      best: 360,
+      count: 1,
+      latest: { seconds: 360 },
+    });
+    expect(listed[0]).not.toHaveProperty('path');
+  });
+
+  it('lists nothing of another Visitor’s, and nothing without times', async () => {
+    const { app } = await runAfterAscent(upTheAscent(300));
+
+    expect((await ranBy(app, VISITOR_B)).body).toEqual({ ascents: [] });
+  });
+
+  it('needs a signed-in Visitor', async () => {
+    const { app } = await runAfterAscent(upTheAscent(300));
+
+    expect((await ranBy(app)).status).toBe(401);
+  });
+
+  it('is described in the OpenAPI document', async () => {
+    const { body } = await request(buildApp()).get('/openapi.json');
+
+    expect(body.paths['/ascents/my-times'].get.security).toEqual([{ bearerAuth: [] }]);
+  });
+});
