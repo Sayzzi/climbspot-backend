@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Database } from '../../../../shared/infrastructure/database.ts';
 import type {
@@ -6,10 +6,16 @@ import type {
   NearbyAscent,
   NearbyCriteria,
 } from '../../domain/ascent-repository.ts';
-import { startOf, topOf, type Ascent, type AscentPoint } from '../../domain/ascent.ts';
+import {
+  startOf,
+  topOf,
+  type Ascent,
+  type AscentPoint,
+  type AscentSummary,
+} from '../../domain/ascent.ts';
 import { buildProfile } from '../../../../shared/domain/survey/elevation-profile.ts';
 import type { Bounds, Position } from '../../../../shared/domain/position.ts';
-import { ascents } from './ascents.schema.ts';
+import { ascents, favouriteAscents } from './ascents.schema.ts';
 
 const toWkt = ({ longitude, latitude }: Position) => `${String(longitude)} ${String(latitude)}`;
 
@@ -134,32 +140,51 @@ export class DrizzleAscentRepository implements AscentRepository {
       .orderBy(distanceToStart, ascents.id)
       .limit(limit);
 
-    return rows.map(
-      ({
-        id,
-        name,
-        surface,
-        start,
-        top,
-        startElevation,
-        topElevation,
-        createdAt,
-        distanceToStart,
-        ...measurements
-      }) => ({
-        ascent: {
-          id,
-          name,
-          surface,
-          start: toAscentPoint(start, startElevation),
-          top: toAscentPoint(top, topElevation),
-          measurements,
-          createdAt,
-        },
-        distanceToStart,
-      }),
-    );
+    return rows.map(({ distanceToStart, ...row }) => ({
+      ascent: toSummary(row),
+      distanceToStart,
+    }));
   }
+
+  async findFavourites(visitorId: string): Promise<AscentSummary[]> {
+    const rows = await this.db
+      .select(summaryColumns)
+      .from(ascents)
+      .innerJoin(favouriteAscents, eq(favouriteAscents.ascentId, ascents.id))
+      .where(eq(favouriteAscents.visitorId, visitorId))
+      .orderBy(desc(favouriteAscents.markedAt), ascents.id);
+    return rows.map(toSummary);
+  }
+}
+
+type SummaryRow = {
+  [K in keyof typeof summaryColumns]: K extends 'start' | 'top'
+    ? string
+    : K extends 'startElevation' | 'topElevation'
+      ? number
+      : (typeof ascents.$inferSelect)[K & keyof typeof ascents.$inferSelect];
+};
+
+function toSummary({
+  id,
+  name,
+  surface,
+  start,
+  top,
+  startElevation,
+  topElevation,
+  createdAt,
+  ...measurements
+}: SummaryRow): AscentSummary {
+  return {
+    id,
+    name,
+    surface,
+    start: toAscentPoint(start, startElevation),
+    top: toAscentPoint(top, topElevation),
+    measurements,
+    createdAt,
+  };
 }
 
 function toAscentPoint(geoJson: string, elevation: number): AscentPoint {

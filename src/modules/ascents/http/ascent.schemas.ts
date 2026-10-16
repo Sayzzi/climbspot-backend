@@ -108,21 +108,23 @@ export const nearbyQuerySchema = z.object({
   }),
 });
 
+const myAscentTimesSummarySchema = z
+  .object({
+    best: z.int().meta({ description: 'Seconds.' }),
+    count: z.int().positive(),
+  })
+  .optional()
+  .meta({
+    description:
+      "The signed-in Visitor's best Ascent Time here and how many they have; only for them, and only when they have one.",
+  });
+
 export const nearbyAscentsSchema = z
   .object({
     ascents: z.array(
       ascentSummarySchema.extend({
         distanceToStart: metres('Geodesic distance from the searched position to the Start'),
-        myAscentTimes: z
-          .object({
-            best: z.int().meta({ description: 'Seconds.' }),
-            count: z.int().positive(),
-          })
-          .optional()
-          .meta({
-            description:
-              "The signed-in Visitor's best Ascent Time here and how many they have; only for them, and only when they have one.",
-          }),
+        myAscentTimes: myAscentTimesSummarySchema,
         favourite: z.boolean().optional().meta({
           description:
             "Whether it is one of the signed-in Visitor's Favourite Ascents; absent when nobody is signed in.",
@@ -131,6 +133,18 @@ export const nearbyAscentsSchema = z
     ),
   })
   .meta({ id: 'NearbyAscents' });
+
+export const favouriteAscentsSchema = z
+  .object({
+    ascents: z.array(
+      ascentSummarySchema.extend({
+        myAscentTimes: myAscentTimesSummarySchema,
+      }),
+    ),
+  })
+  .meta({ id: 'FavouriteAscents' });
+
+export type FavouriteAscentsResponse = z.infer<typeof favouriteAscentsSchema>;
 
 export const myAscentTimesSchema = z
   .object({

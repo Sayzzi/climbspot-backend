@@ -7,6 +7,7 @@ import { MarkFavouriteAscent, UnmarkFavouriteAscent } from './application/favour
 import { FindAscentsNearby } from './application/find-ascents-nearby.ts';
 import { GetAscent } from './application/get-ascent.ts';
 import { GetMyAscentTimes } from './application/get-my-ascent-times.ts';
+import { ListFavouriteAscents } from './application/list-favourite-ascents.ts';
 import type { Bounds } from '../../shared/domain/position.ts';
 import type { ElevationProvider } from './domain/elevation-provider.ts';
 import {
@@ -63,6 +64,7 @@ export function createAscentsModule({
       getMyAscentTimes,
       markFavouriteAscent: new MarkFavouriteAscent({ repository, favourites, now }),
       unmarkFavouriteAscent: new UnmarkFavouriteAscent(favourites),
+      listFavouriteAscents: new ListFavouriteAscents(repository, ascentTimes),
       readGpxPath,
     }),
     registerOpenApi: (registry) => {

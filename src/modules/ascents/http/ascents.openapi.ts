@@ -14,6 +14,7 @@ import {
   ascentIdParamsSchema,
   ascentSchema,
   createAscentBodySchema,
+  favouriteAscentsSchema,
   myAscentTimesSchema,
   nearbyAscentsSchema,
   nearbyQuerySchema,
@@ -105,6 +106,23 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
       400: errorResponse('`VALIDATION_FAILED`: the id is not a UUID.'),
       404: errorResponse('`ASCENT_NOT_FOUND`: no Ascent has this id.'),
     },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: `${basePath}/favourites`,
+    operationId: 'listFavouriteAscents',
+    summary: "The signed-in Visitor's Favourite Ascents, most recently marked first",
+    description: 'Only for them, with their best Ascent Time on each when they have one.',
+    tags: ['Ascents'],
+    security: bearerAuth,
+    responses: withSignedInResponses({
+      200: {
+        description: 'Their Favourite Ascents; empty when they have none.',
+        content: { 'application/json': { schema: favouriteAscentsSchema } },
+      },
+      401: errorResponse('`AUTHENTICATION_REQUIRED`: nobody is signed in.'),
+    }),
   });
 
   registry.registerPath({

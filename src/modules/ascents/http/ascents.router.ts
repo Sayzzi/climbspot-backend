@@ -12,11 +12,13 @@ import type {
 import type { FindAscentsNearby } from '../application/find-ascents-nearby.ts';
 import type { GetAscent } from '../application/get-ascent.ts';
 import type { GetMyAscentTimes } from '../application/get-my-ascent-times.ts';
+import type { ListFavouriteAscents } from '../application/list-favourite-ascents.ts';
 import { GpxTooLargeError } from '../domain/ascent-errors.ts';
 import { MAXIMUM_GPX_FILE_SIZE } from '../domain/ascent-rules.ts';
 import type { PathReader } from '../domain/path-reader.ts';
 import {
   toAscentResponse,
+  toFavouriteAscentsResponse,
   toMyAscentTimesResponse,
   toNearbyAscentsResponse,
 } from './ascent.mapper.ts';
@@ -33,6 +35,7 @@ export interface AscentsRouterDependencies {
   readonly getMyAscentTimes: GetMyAscentTimes;
   readonly markFavouriteAscent: MarkFavouriteAscent;
   readonly unmarkFavouriteAscent: UnmarkFavouriteAscent;
+  readonly listFavouriteAscents: ListFavouriteAscents;
   readonly readGpxPath: PathReader;
 }
 
@@ -47,6 +50,7 @@ export function createAscentsRouter({
   getMyAscentTimes,
   markFavouriteAscent,
   unmarkFavouriteAscent,
+  listFavouriteAscents,
   readGpxPath,
 }: AscentsRouterDependencies): Router {
   const router = Router();
@@ -92,6 +96,13 @@ export function createAscentsRouter({
     );
 
     res.json(toNearbyAscentsResponse(results));
+  });
+
+  // Declared before `/:id`, which would otherwise capture it.
+  router.get('/favourites', async (_req, res) => {
+    const { visitorId } = signedInVisitor(res);
+
+    res.json(toFavouriteAscentsResponse(await listFavouriteAscents.execute(visitorId)));
   });
 
   router.get('/:id', async (req, res) => {

@@ -126,6 +126,37 @@ describe('Favourite Ascents in the nearby search', () => {
   });
 });
 
+describe('GET /ascents/favourites', () => {
+  it('lists the signed-in Visitor’s Favourite Ascents, most recently marked first', async () => {
+    const app = buildApp();
+    const first = await anAscent(app);
+    const second = await anAscent(app);
+    const notKept = await anAscent(app);
+    await request(app).put(`/ascents/${first}/favourite`).set(as(VISITOR_A));
+    await request(app).put(`/ascents/${second}/favourite`).set(as(VISITOR_A));
+    await request(app).put(`/ascents/${notKept}/favourite`).set(as(VISITOR_B));
+
+    const response = await request(app).get('/ascents/favourites').set(as(VISITOR_A));
+
+    expect(response.status).toBe(200);
+    const listed = (response.body as { ascents: { id: string }[] }).ascents;
+    expect(listed.map((ascent) => ascent.id)).toEqual([second, first]);
+    expect(listed[0]).toMatchObject({ name: 'Côte de test', category: 'cat4', surface: 'paved' });
+    expect(listed[0]).not.toHaveProperty('path');
+    expect(listed[0]).not.toHaveProperty('distanceToStart');
+  });
+
+  it('is empty for a Visitor without favourites', async () => {
+    const response = await request(buildApp()).get('/ascents/favourites').set(as(VISITOR_A));
+
+    expect(response.body).toEqual({ ascents: [] });
+  });
+
+  it('needs a signed-in Visitor', async () => {
+    expect((await request(buildApp()).get('/ascents/favourites')).status).toBe(401);
+  });
+});
+
 describe('Favourite Ascents in the OpenAPI document', () => {
   it('describes marking and unmarking, for signed-in Visitors', async () => {
     const { body } = await request(buildApp()).get('/openapi.json');
@@ -135,6 +166,7 @@ describe('Favourite Ascents in the OpenAPI document', () => {
     expect(path.put.responses).toHaveProperty('204');
     expect(path.put.responses).toHaveProperty('404');
     expect(path.delete.security).toEqual([{ bearerAuth: [] }]);
+    expect(body.paths['/ascents/favourites'].get.security).toEqual([{ bearerAuth: [] }]);
     expect(body.components.schemas.Ascent.properties).toHaveProperty('favourite');
     expect(
       body.components.schemas.NearbyAscents.properties.ascents.items.properties,
