@@ -14,6 +14,8 @@ export interface NearbyCriteria {
   readonly surfaces?: readonly Surface[];
   /** When given, only Ascents in one of these Categories. */
   readonly categories?: readonly Category[];
+  /** When given, only this Visitor's Favourite Ascents. */
+  readonly favouritesOf?: string;
 }
 
 export interface NearbyAscent {

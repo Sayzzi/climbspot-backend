@@ -124,6 +124,51 @@ describe('Favourite Ascents in the nearby search', () => {
     expect(forB.every((ascent) => ascent.favourite === false)).toBe(true);
     expect(signedOut.every((ascent) => !('favourite' in ascent))).toBe(true);
   });
+
+  it('keeps only the signed-in Visitor’s favourites when asked', async () => {
+    const app = buildApp();
+    const kept = await anAscent(app);
+    await anAscent(app);
+    const theirs = await anAscent(app);
+    await request(app).put(`/ascents/${kept}/favourite`).set(as(VISITOR_A));
+    await request(app).put(`/ascents/${theirs}/favourite`).set(as(VISITOR_B));
+
+    const response = await request(app)
+      .get('/ascents/nearby')
+      .query({ latitude: REFERENCE.latitude, longitude: REFERENCE.longitude, favourite: 'true' })
+      .set(as(VISITOR_A));
+
+    expect(response.status).toBe(200);
+    expect((response.body as { ascents: { id: string }[] }).ascents.map((a) => a.id)).toEqual([
+      kept,
+    ]);
+  });
+
+  it('combines the favourites with the other filters', async () => {
+    const app = buildApp();
+    const kept = await anAscent(app);
+    await request(app).put(`/ascents/${kept}/favourite`).set(as(VISITOR_A));
+
+    const response = await request(app)
+      .get('/ascents/nearby')
+      .query({
+        latitude: REFERENCE.latitude,
+        longitude: REFERENCE.longitude,
+        favourite: 'true',
+        category: 'cat1',
+      })
+      .set(as(VISITOR_A));
+
+    expect(response.body).toEqual({ ascents: [] });
+  });
+
+  it('refuses the favourites filter to a Visitor who is not signed in', async () => {
+    const response = await request(buildApp())
+      .get('/ascents/nearby')
+      .query({ latitude: REFERENCE.latitude, longitude: REFERENCE.longitude, favourite: 'true' });
+
+    expect(response.status).toBe(401);
+  });
 });
 
 describe('GET /ascents/favourites', () => {
@@ -167,6 +212,11 @@ describe('Favourite Ascents in the OpenAPI document', () => {
     expect(path.put.responses).toHaveProperty('404');
     expect(path.delete.security).toEqual([{ bearerAuth: [] }]);
     expect(body.paths['/ascents/favourites'].get.security).toEqual([{ bearerAuth: [] }]);
+    expect(
+      body.paths['/ascents/nearby'].get.parameters.map(
+        (parameter: { name: string }) => parameter.name,
+      ),
+    ).toContain('favourite');
     expect(body.components.schemas.Ascent.properties).toHaveProperty('favourite');
     expect(
       body.components.schemas.NearbyAscents.properties.ascents.items.properties,

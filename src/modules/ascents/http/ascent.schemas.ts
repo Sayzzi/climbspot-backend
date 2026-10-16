@@ -106,6 +106,10 @@ export const nearbyQuerySchema = z.object({
   category: z.array(categorySchema).optional().meta({
     description: 'Only Ascents in one of these Categories. Repeatable.',
   }),
+  favourite: z.boolean().optional().meta({
+    description:
+      "`true`: only the signed-in Visitor's Favourite Ascents. Needs a signed-in Visitor.",
+  }),
 });
 
 const myAscentTimesSummarySchema = z

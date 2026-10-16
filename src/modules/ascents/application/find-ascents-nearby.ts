@@ -23,6 +23,8 @@ export interface FindAscentsNearbyInput {
   readonly activities?: readonly Activity[] | undefined;
   /** When given, only Ascents in one of these Categories. */
   readonly categories?: readonly Category[] | undefined;
+  /** Only the signed-in Visitor's Favourite Ascents. */
+  readonly favouritesOnly?: boolean;
 }
 
 /**
@@ -47,7 +49,7 @@ export class FindAscentsNearby {
    * none when signed out.
    */
   async execute(
-    { activities, categories, ...search }: FindAscentsNearbyInput,
+    { activities, categories, favouritesOnly = false, ...search }: FindAscentsNearbyInput,
     visitorId?: string,
   ): Promise<NearbyAscentResult[]> {
     const criteria: NearbyCriteria = {
@@ -55,6 +57,7 @@ export class FindAscentsNearby {
       // Activities are derived from Surfaces, so filtering by Activity means filtering by Surface.
       ...(activities && { surfaces: surfacesAllowing(activities) }),
       ...(categories && { categories }),
+      ...(favouritesOnly && visitorId !== undefined && { favouritesOf: visitorId }),
     };
     const results = await this.repository.findNearby(criteria);
     if (visitorId === undefined) {

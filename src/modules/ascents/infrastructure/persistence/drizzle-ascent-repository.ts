@@ -123,6 +123,7 @@ export class DrizzleAscentRepository implements AscentRepository {
     limit,
     surfaces,
     categories,
+    favouritesOf,
   }: NearbyCriteria): Promise<NearbyAscent[]> {
     const searchedPosition = pointFrom(position);
     const distanceToStart = sql<number>`extensions.st_distance(${ascents.start}, ${searchedPosition})`;
@@ -135,6 +136,15 @@ export class DrizzleAscentRepository implements AscentRepository {
           sql`extensions.st_dwithin(${ascents.start}, ${searchedPosition}, ${radius})`,
           surfaces && inArray(ascents.surface, [...surfaces]),
           categories && inArray(ascents.category, [...categories]),
+          favouritesOf === undefined
+            ? undefined
+            : inArray(
+                ascents.id,
+                this.db
+                  .select({ id: favouriteAscents.ascentId })
+                  .from(favouriteAscents)
+                  .where(eq(favouriteAscents.visitorId, favouritesOf)),
+              ),
         ),
       )
       .orderBy(distanceToStart, ascents.id)

@@ -77,12 +77,16 @@ export function createAscentsRouter({
 
   // Declared before `/:id`, which would otherwise capture it.
   router.get('/nearby', async (req, res) => {
-    const { latitude, longitude, radius, limit, activity, category } = nearbyQuerySchema.parse(
-      normaliseQuery(req.query, {
-        numbers: ['latitude', 'longitude', 'radius', 'limit'],
-        repeatable: ['activity', 'category'],
-      }),
-    );
+    const { latitude, longitude, radius, limit, activity, category, favourite } =
+      nearbyQuerySchema.parse(
+        normaliseQuery(req.query, {
+          numbers: ['latitude', 'longitude', 'radius', 'limit'],
+          booleans: ['favourite'],
+          repeatable: ['activity', 'category'],
+        }),
+      );
+    // Only a signed-in Visitor has favourites to keep to.
+    const visitorId = favourite ? signedInVisitor(res).visitorId : visitorOf(res)?.visitorId;
 
     const results = await findAscentsNearby.execute(
       {
@@ -91,8 +95,9 @@ export function createAscentsRouter({
         limit,
         activities: activity,
         categories: category,
+        favouritesOnly: favourite === true,
       },
-      visitorOf(res)?.visitorId,
+      visitorId,
     );
 
     res.json(toNearbyAscentsResponse(results));
@@ -141,6 +146,8 @@ export function createAscentsRouter({
 interface QueryShape {
   /** Parameters holding a number; unparseable values become NaN and fail validation. */
   readonly numbers: readonly string[];
+  /** Parameters holding `true` or `false`; anything else fails validation. */
+  readonly booleans: readonly string[];
   /** Parameters that may be repeated (`?activity=a&activity=b`). */
   readonly repeatable: readonly string[];
 }
@@ -153,7 +160,7 @@ interface QueryShape {
  */
 function normaliseQuery(
   query: Record<string, unknown>,
-  { numbers, repeatable }: QueryShape,
+  { numbers, booleans, repeatable }: QueryShape,
 ): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(query)
@@ -161,6 +168,9 @@ function normaliseQuery(
       .map(([name, value]) => {
         if (numbers.includes(name)) {
           return [name, typeof value === 'string' ? Number(value) : value];
+        }
+        if (booleans.includes(name)) {
+          return [name, value === 'true' ? true : value === 'false' ? false : value];
         }
         return [name, repeatable.includes(name) ? [value].flat() : value];
       }),
