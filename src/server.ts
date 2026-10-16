@@ -5,6 +5,7 @@ import {
   ascentCatalogue,
   createAscentsModule,
   forgetContributor,
+  forgetFavouriteAscents,
   OpenMeteoElevationProvider,
 } from './modules/ascents/index.ts';
 import {
@@ -85,7 +86,12 @@ const app = createApp({
     createAccountsModule({
       db: database.db,
       directory: accountDirectory,
-      erasers: [forgetContributor, forgetSavedItineraries, forgetStravaConnection(strava)],
+      erasers: [
+        forgetContributor,
+        forgetFavouriteAscents,
+        forgetSavedItineraries,
+        forgetStravaConnection(strava),
+      ],
       stravaFlatPace: stravaFlatPace({ db: database.db, ...strava }),
     }),
     createSavedItinerariesModule({ db: database.db }),

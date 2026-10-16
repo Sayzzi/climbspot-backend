@@ -5,6 +5,10 @@ import { z } from 'zod';
 import { signedInVisitor, visitorOf } from '../../../shared/http/identity.ts';
 import { RequestValidationError } from '../../../shared/http/request-validation-error.ts';
 import type { CreateAscent } from '../application/create-ascent.ts';
+import type {
+  MarkFavouriteAscent,
+  UnmarkFavouriteAscent,
+} from '../application/favourite-ascents.ts';
 import type { FindAscentsNearby } from '../application/find-ascents-nearby.ts';
 import type { GetAscent } from '../application/get-ascent.ts';
 import type { GetMyAscentTimes } from '../application/get-my-ascent-times.ts';
@@ -27,6 +31,8 @@ export interface AscentsRouterDependencies {
   readonly getAscent: GetAscent;
   readonly findAscentsNearby: FindAscentsNearby;
   readonly getMyAscentTimes: GetMyAscentTimes;
+  readonly markFavouriteAscent: MarkFavouriteAscent;
+  readonly unmarkFavouriteAscent: UnmarkFavouriteAscent;
   readonly readGpxPath: PathReader;
 }
 
@@ -39,6 +45,8 @@ export function createAscentsRouter({
   getAscent,
   findAscentsNearby,
   getMyAscentTimes,
+  markFavouriteAscent,
+  unmarkFavouriteAscent,
   readGpxPath,
 }: AscentsRouterDependencies): Router {
   const router = Router();
@@ -88,8 +96,25 @@ export function createAscentsRouter({
 
   router.get('/:id', async (req, res) => {
     const { id } = ascentIdParamsSchema.parse(req.params);
+    const { ascent, favourite } = await getAscent.execute(id, visitorOf(res)?.visitorId);
 
-    res.json(toAscentResponse(await getAscent.execute(id)));
+    res.json(toAscentResponse(ascent, favourite));
+  });
+
+  router.put('/:id/favourite', async (req, res) => {
+    const { visitorId } = signedInVisitor(res);
+    const { id } = ascentIdParamsSchema.parse(req.params);
+
+    await markFavouriteAscent.execute(visitorId, id);
+    res.status(204).end();
+  });
+
+  router.delete('/:id/favourite', async (req, res) => {
+    const { visitorId } = signedInVisitor(res);
+    const { id } = ascentIdParamsSchema.parse(req.params);
+
+    await unmarkFavouriteAscent.execute(visitorId, id);
+    res.status(204).end();
   });
 
   router.get('/:id/my-times', async (req, res) => {

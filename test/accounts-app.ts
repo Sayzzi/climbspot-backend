@@ -6,7 +6,11 @@ import { createApp } from '../src/app.ts';
 import type { SecondFactors } from '../src/shared/domain/identity.ts';
 import type { AccountDirectory } from '../src/modules/accounts/domain/account-directory.ts';
 import { createAccountsModule, type VisitorDataEraserFor } from '../src/modules/accounts/index.ts';
-import { createAscentsModule, forgetContributor } from '../src/modules/ascents/index.ts';
+import {
+  createAscentsModule,
+  forgetContributor,
+  forgetFavouriteAscents,
+} from '../src/modules/ascents/index.ts';
 import {
   createSavedItinerariesModule,
   forgetSavedItineraries,
@@ -39,7 +43,7 @@ export interface AccountsAppOptions {
   readonly directory?: AccountDirectory;
   /** Who has a second factor; nobody is checked by default. */
   readonly secondFactors?: SecondFactors;
-  /** More to erase with an account, after the Ascents and Saved Itineraries. */
+  /** More to erase with an account, after the Ascents, favourites and Saved Itineraries. */
   readonly alsoErase?: readonly VisitorDataEraserFor[];
 }
 
@@ -84,7 +88,12 @@ export function useAccountsApp(): AccountsApp {
         createAccountsModule({
           db: connection.db,
           directory,
-          erasers: [forgetContributor, forgetSavedItineraries, ...alsoErase],
+          erasers: [
+            forgetContributor,
+            forgetFavouriteAscents,
+            forgetSavedItineraries,
+            ...alsoErase,
+          ],
         }),
         createAscentsModule({ db: connection.db, elevationProvider: uniformGradient(0.08) }),
         createSavedItinerariesModule({ db: connection.db }),

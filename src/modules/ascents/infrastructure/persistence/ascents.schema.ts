@@ -4,6 +4,7 @@ import {
   index,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uuid,
@@ -55,4 +56,20 @@ export const ascents = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
   },
   (table) => [index('ascents_start_idx').using('gist', table.start)],
+);
+
+/** The Ascents each signed-in Visitor marked to find them again (ADR 0009). */
+export const favouriteAscents = pgTable(
+  'favourite_ascents',
+  {
+    visitorId: uuid('visitor_id').notNull(),
+    ascentId: uuid('ascent_id')
+      .notNull()
+      .references(() => ascents.id, { onDelete: 'cascade' }),
+    markedAt: timestamp('marked_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.visitorId, table.ascentId] }),
+    index('favourite_ascents_visitor_idx').on(table.visitorId, table.markedAt),
+  ],
 );

@@ -46,7 +46,8 @@ export function toAscentSummaryResponse(ascent: AscentSummary): AscentSummaryRes
   };
 }
 
-export function toAscentResponse(ascent: Ascent): AscentResponse {
+/** @param favourite Whether it is the signed-in Visitor's favourite; left out when signed out. */
+export function toAscentResponse(ascent: Ascent, favourite?: boolean): AscentResponse {
   return {
     ...toAscentSummaryResponse(summarize(ascent)),
     path: {
@@ -60,6 +61,7 @@ export function toAscentResponse(ascent: Ascent): AscentResponse {
       distance: round(distance, 1),
       elevation: round(elevation, 1),
     })),
+    ...(favourite !== undefined && { favourite }),
   };
 }
 

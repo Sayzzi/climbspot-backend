@@ -25,6 +25,7 @@ export interface NearbyAscent {
 export interface AscentRepository {
   save(ascent: Ascent): Promise<void>;
   findById(id: string): Promise<Ascent | undefined>;
+  exists(id: string): Promise<boolean>;
   /** Ascents whose Start is within the radius, nearest first. */
   findNearby(criteria: NearbyCriteria): Promise<NearbyAscent[]>;
   /** The id and path of the Ascents whose Start lies within the box. */

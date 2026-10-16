@@ -92,7 +92,10 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
     path: `${basePath}/{id}`,
     operationId: 'getAscent',
     summary: 'Get an Ascent with its path and Elevation Profile',
+    description:
+      "With a signed-in Visitor's token, it says whether the Ascent is one of their Favourite Ascents.",
     tags: ['Ascents'],
+    security: [{}, ...bearerAuth],
     request: { params: ascentIdParamsSchema },
     responses: {
       200: {
@@ -102,6 +105,39 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
       400: errorResponse('`VALIDATION_FAILED`: the id is not a UUID.'),
       404: errorResponse('`ASCENT_NOT_FOUND`: no Ascent has this id.'),
     },
+  });
+
+  registry.registerPath({
+    method: 'put',
+    path: `${basePath}/{id}/favourite`,
+    operationId: 'markFavouriteAscent',
+    summary: "Make an Ascent one of the signed-in Visitor's Favourite Ascents",
+    description: 'Only they see it. Marking it again changes nothing.',
+    tags: ['Ascents'],
+    security: bearerAuth,
+    request: { params: ascentIdParamsSchema },
+    responses: withSignedInResponses({
+      204: { description: 'It is one of their Favourite Ascents.' },
+      400: errorResponse('`VALIDATION_FAILED`: the id is not a UUID.'),
+      401: errorResponse('`AUTHENTICATION_REQUIRED`: nobody is signed in.'),
+      404: errorResponse('`ASCENT_NOT_FOUND`: no Ascent has this id.'),
+    }),
+  });
+
+  registry.registerPath({
+    method: 'delete',
+    path: `${basePath}/{id}/favourite`,
+    operationId: 'unmarkFavouriteAscent',
+    summary: "Take an Ascent out of the signed-in Visitor's Favourite Ascents",
+    description: 'Nothing happens when it was not one of them.',
+    tags: ['Ascents'],
+    security: bearerAuth,
+    request: { params: ascentIdParamsSchema },
+    responses: withSignedInResponses({
+      204: { description: 'It is not one of their Favourite Ascents.' },
+      400: errorResponse('`VALIDATION_FAILED`: the id is not a UUID.'),
+      401: errorResponse('`AUTHENTICATION_REQUIRED`: nobody is signed in.'),
+    }),
   });
 
   registry.registerPath({

@@ -70,6 +70,10 @@ export const ascentSchema = ascentSummarySchema
         elevation: metres('Elevation'),
       }),
     ),
+    favourite: z.boolean().optional().meta({
+      description:
+        "Whether it is one of the signed-in Visitor's Favourite Ascents; absent when nobody is signed in.",
+    }),
   })
   .meta({ id: 'Ascent' });
 

@@ -78,6 +78,21 @@ describe('DELETE /me', () => {
     expect(rows[0]?.count).toBe(0);
   });
 
+  it('erases the Visitor’s Favourite Ascents', async () => {
+    const app = buildApp();
+    const added = await uploadGpx(app, gpxTrack(straightNorth(REFERENCE, 1000)), { as: VISITOR_B });
+    const id = added.body.id as string;
+    await request(app).put(`/ascents/${id}/favourite`).set(as(VISITOR_A));
+    await request(app).put(`/ascents/${id}/favourite`).set(as(VISITOR_B));
+
+    await request(app).delete('/me').set(as(VISITOR_A));
+
+    const rows = await buildApp
+      .db()
+      .execute<{ visitor: string }>(sql`select visitor_id as visitor from favourite_ascents`);
+    expect(rows.map((row) => row.visitor)).toEqual([VISITOR_B.visitorId]);
+  });
+
   it('leaves other Visitors’ data alone', async () => {
     const app = buildApp();
     await saveLoop(app, VISITOR_B);

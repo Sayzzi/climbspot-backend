@@ -97,6 +97,11 @@ export class DrizzleAscentRepository implements AscentRepository {
     return row && toAscent(row);
   }
 
+  async exists(id: string): Promise<boolean> {
+    const [row] = await this.db.select({ id: ascents.id }).from(ascents).where(eq(ascents.id, id));
+    return row !== undefined;
+  }
+
   async findStartingWithin({ south, west, north, east }: Bounds) {
     const box = sql`extensions.st_makeenvelope(${west}, ${south}, ${east}, ${north}, 4326)::extensions.geography`;
     const rows = await this.db

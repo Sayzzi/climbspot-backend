@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { HttpModule } from '../../shared/http/http-module.ts';
 import type { Database } from '../../shared/infrastructure/database.ts';
 import { CreateAscent } from './application/create-ascent.ts';
+import { MarkFavouriteAscent, UnmarkFavouriteAscent } from './application/favourite-ascents.ts';
 import { FindAscentsNearby } from './application/find-ascents-nearby.ts';
 import { GetAscent } from './application/get-ascent.ts';
 import { GetMyAscentTimes } from './application/get-my-ascent-times.ts';
@@ -17,6 +18,7 @@ import { registerAscentsOpenApi } from './http/ascents.openapi.ts';
 import { createAscentsRouter } from './http/ascents.router.ts';
 import { readGpxPath } from './infrastructure/gpx/gpx-path-reader.ts';
 import { DrizzleAscentRepository } from './infrastructure/persistence/drizzle-ascent-repository.ts';
+import { DrizzleFavouriteAscents } from './infrastructure/persistence/drizzle-favourite-ascents.ts';
 
 export { OpenMeteoElevationProvider } from './infrastructure/open-meteo-elevation-provider.ts';
 
@@ -38,15 +40,17 @@ export function createAscentsModule({
   onAscentAdded = () => Promise.resolve(),
 }: AscentsModuleDependencies): HttpModule {
   const repository = new DrizzleAscentRepository(db);
+  const favourites = new DrizzleFavouriteAscents(db);
+  const now = () => new Date();
 
   const createAscent = new CreateAscent({
     repository,
     elevationProvider,
     newId: randomUUID,
-    now: () => new Date(),
+    now,
     onAscentAdded,
   });
-  const getAscent = new GetAscent(repository);
+  const getAscent = new GetAscent(repository, favourites);
   const findAscentsNearby = new FindAscentsNearby(repository, ascentTimes);
   const getMyAscentTimes = new GetMyAscentTimes(repository, ascentTimes);
 
@@ -57,10 +61,23 @@ export function createAscentsModule({
       getAscent,
       findAscentsNearby,
       getMyAscentTimes,
+      markFavouriteAscent: new MarkFavouriteAscent({ repository, favourites, now }),
+      unmarkFavouriteAscent: new UnmarkFavouriteAscent(favourites),
       readGpxPath,
     }),
     registerOpenApi: (registry) => {
       registerAscentsOpenApi(registry, basePath);
+    },
+  };
+}
+
+/** Erases a Visitor's Favourite Ascents when their account is deleted. */
+export function forgetFavouriteAscents(db: Database) {
+  const favourites = new DrizzleFavouriteAscents(db);
+  return {
+    erase: async (visitorId: string) => {
+      await favourites.forget(visitorId);
+      return undefined;
     },
   };
 }
