@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import type { ElevationProvider } from '../src/modules/ascents/domain/elevation-provider.ts';
+import type { PersonalAscentTimes } from '../src/modules/ascents/domain/personal-ascent-times.ts';
 import { createAscentsModule } from '../src/modules/ascents/index.ts';
 import { createDatabase, type DatabaseConnection } from '../src/shared/infrastructure/database.ts';
 import { createTestDatabase, type TestDatabase } from './database.ts';
@@ -14,6 +15,8 @@ import { uniformGradient } from './terrain.ts';
 
 export interface AscentsAppOptions {
   readonly terrain?: ElevationProvider;
+  /** Each Visitor's own Ascent Times; none by default. */
+  readonly ascentTimes?: PersonalAscentTimes;
 }
 
 /**
@@ -36,12 +39,18 @@ export function useAscentsApp(): (options?: AscentsAppOptions) => Express {
 
   beforeEach(() => testDatabase.truncate());
 
-  return ({ terrain = uniformGradient(0.08) } = {}) =>
+  return ({ terrain = uniformGradient(0.08), ascentTimes } = {}) =>
     createApp({
       logger: pino({ level: 'silent' }),
       corsOrigins: [],
       identityVerifier: fakeIdentityVerifier,
-      modules: [createAscentsModule({ db: connection.db, elevationProvider: terrain })],
+      modules: [
+        createAscentsModule({
+          db: connection.db,
+          elevationProvider: terrain,
+          ...(ascentTimes && { ascentTimes }),
+        }),
+      ],
     });
 }
 

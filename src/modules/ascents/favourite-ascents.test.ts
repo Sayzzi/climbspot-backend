@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { useAscentsApp, uploadGpx } from '../../../test/ascents-app.ts';
 import { gpxTrack } from '../../../test/gpx.ts';
 import { tokenFor, VISITOR_A, VISITOR_B } from '../../../test/identity.ts';
-import { REFERENCE, straightNorth } from '../../../test/terrain.ts';
+import { northOf, REFERENCE, straightNorth } from '../../../test/terrain.ts';
 import type { Identity } from '../../shared/domain/identity.ts';
 
 const buildApp = useAscentsApp();
@@ -144,22 +144,28 @@ describe('Favourite Ascents in the nearby search', () => {
     ]);
   });
 
-  it('combines the favourites with the other filters', async () => {
+  it('combines the favourites with the other filters and the radius', async () => {
     const app = buildApp();
     const kept = await anAscent(app);
+    await anAscent(app);
+    const [farAway] = northOf(REFERENCE, 12_000);
+    if (farAway === undefined) throw new Error('unreachable');
+    const far = (await uploadGpx(app, gpxTrack(straightNorth(farAway, 1000)))).body.id as string;
     await request(app).put(`/ascents/${kept}/favourite`).set(as(VISITOR_A));
+    await request(app).put(`/ascents/${far}/favourite`).set(as(VISITOR_A));
+    const search = (query: Record<string, string>) =>
+      request(app)
+        .get('/ascents/nearby')
+        .query({ latitude: REFERENCE.latitude, longitude: REFERENCE.longitude, ...query })
+        .set(as(VISITOR_A));
+    const ids = (response: request.Response) =>
+      (response.body as { ascents: { id: string }[] }).ascents.map((ascent) => ascent.id);
 
-    const response = await request(app)
-      .get('/ascents/nearby')
-      .query({
-        latitude: REFERENCE.latitude,
-        longitude: REFERENCE.longitude,
-        favourite: 'true',
-        category: 'cat1',
-      })
-      .set(as(VISITOR_A));
-
-    expect(response.body).toEqual({ ascents: [] });
+    expect(ids(await search({ favourite: 'true', category: 'cat4' }))).toEqual([kept]);
+    expect(ids(await search({ favourite: 'true', category: 'cat1' }))).toEqual([]);
+    expect(ids(await search({ favourite: 'true', radius: '20000' })).sort()).toEqual(
+      [kept, far].sort(),
+    );
   });
 
   it('refuses the favourites filter to a Visitor who is not signed in', async () => {
@@ -191,6 +197,22 @@ describe('GET /ascents/favourites', () => {
     expect(listed[0]).not.toHaveProperty('distanceToStart');
   });
 
+  it('carries the Visitor’s best Ascent Time on each favourite they went up', async () => {
+    const app = buildApp({
+      ascentTimes: {
+        summaries: (_visitor, ids) =>
+          Promise.resolve(new Map(ids.map((id) => [id, { best: 312, count: 3 }]))),
+        of: () => Promise.resolve([]),
+      },
+    });
+    const id = await anAscent(app);
+    await request(app).put(`/ascents/${id}/favourite`).set(as(VISITOR_A));
+
+    const response = await request(app).get('/ascents/favourites').set(as(VISITOR_A));
+
+    expect(response.body.ascents[0]).toMatchObject({ id, myAscentTimes: { best: 312, count: 3 } });
+  });
+
   it('is empty for a Visitor without favourites', async () => {
     const response = await request(buildApp()).get('/ascents/favourites').set(as(VISITOR_A));
 
@@ -217,6 +239,7 @@ describe('Favourite Ascents in the OpenAPI document', () => {
         (parameter: { name: string }) => parameter.name,
       ),
     ).toContain('favourite');
+    expect(body.paths['/ascents/nearby'].get.responses).toHaveProperty('401');
     expect(body.components.schemas.Ascent.properties).toHaveProperty('favourite');
     expect(
       body.components.schemas.NearbyAscents.properties.ascents.items.properties,

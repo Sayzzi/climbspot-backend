@@ -75,17 +75,18 @@ export function registerAscentsOpenApi(registry: OpenAPIRegistry, basePath: stri
     operationId: 'findAscentsNearby',
     summary: 'Find the Ascents whose Start is closest to a position',
     description:
-      "With a signed-in Visitor's token, each Ascent they went up carries their best Ascent Time.",
+      "With a signed-in Visitor's token, each Ascent says whether it is one of their Favourite Ascents, and those they went up carry their best Ascent Time. `favourite=true` keeps only their Favourite Ascents.",
     tags: ['Ascents'],
     security: [{}, ...bearerAuth],
     request: { query: nearbyQuerySchema },
-    responses: {
+    responses: withSignedInResponses({
       200: {
         description: 'Ascents within the radius, nearest Start first. Empty when none.',
         content: { 'application/json': { schema: nearbyAscentsSchema } },
       },
       400: errorResponse('`VALIDATION_FAILED`: a query parameter is missing or out of range.'),
-    },
+      401: errorResponse('`AUTHENTICATION_REQUIRED`: `favourite=true` needs a signed-in Visitor.'),
+    }),
   });
 
   registry.registerPath({
